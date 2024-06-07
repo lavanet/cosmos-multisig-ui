@@ -34,13 +34,13 @@ const TxMsgDualRedelegateDetails = ({ msgValue }: TxMsgDualRedelegateDetailsProp
       <li>
         <label>From Chain ID:</label>
         <div title={msgValue.fromChainID}>
-          <p>{msgValue.fromChainID}</p>
+          <p>{msgValue?.fromChainID || "None"}</p>
         </div>
       </li>
       <li>
         <label>To Chain ID:</label>
         <div title={msgValue.toChainID}>
-          <p>{msgValue.toChainID}</p>
+          <p>{msgValue?.toChainID || "None"}</p>
         </div>
       </li>
       <style jsx>{`
