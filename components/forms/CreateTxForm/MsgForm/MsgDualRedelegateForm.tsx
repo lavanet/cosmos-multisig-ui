@@ -29,8 +29,6 @@ const MsgDualRedelegateForm = ({
 
   const [fromProviderAddressError, setFromProviderAddressError] = useState("");
   const [toProviderAddressError, setToProviderAddressError] = useState("");
-  const [fromChainIDError, setFromChainIDError] = useState("");
-  const [toChainIDError, setToChainIDError] = useState("");
   const [amountError, setAmountError] = useState("");
 
   const trimmedInputs = trimStringsObj({
@@ -49,8 +47,6 @@ const MsgDualRedelegateForm = ({
     const isMsgValid = (): boolean => {
       setFromProviderAddressError("");
       setToProviderAddressError("");
-      setFromChainIDError("");
-      setToChainIDError("");
       setAmountError("");
 
       if (!fromProviderAddress) {
@@ -60,16 +56,6 @@ const MsgDualRedelegateForm = ({
 
       if (!toProviderAddress) {
         setToProviderAddressError("To Provider address is required");
-        return false;
-      }
-
-      if (!fromChainID) {
-        setFromChainIDError("From Chain ID is required");
-        return false;
-      }
-
-      if (!toChainID) {
-        setToChainIDError("To Chain ID is required");
         return false;
       }
 
@@ -152,9 +138,7 @@ const MsgDualRedelegateForm = ({
           value={fromChainID}
           onChange={({ target }) => {
             setFromChainID(target.value);
-            setFromChainIDError("");
           }}
-          error={fromChainIDError}
         />
       </div>
       <div className="form-item">
@@ -164,9 +148,7 @@ const MsgDualRedelegateForm = ({
           value={toChainID}
           onChange={({ target }) => {
             setToChainID(target.value);
-            setToChainIDError("");
           }}
-          error={toChainIDError}
         />
       </div>
       <div className="form-item">
