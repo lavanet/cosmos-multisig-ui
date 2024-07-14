@@ -170,25 +170,14 @@ const TransactionSigning = (props: TransactionSigningProps) => {
         chainId: chain.chainId,
       };
 
-      if (lavasigner.signDirect) {
-        console.log("signing direct")
-        const { bodyBytes, signatures } = await lavasigner.signDirect(
-          signerAddress,
-          props.tx.msgs,
-          props.tx.fee,
-          props.tx.memo,
-          signerData,
-        );
-      } else {
-        console.log("signing normal")
-        const { bodyBytes, signatures } = await lavasigner.sign(
-          signerAddress,
-          props.tx.msgs,
-          props.tx.fee,
-          props.tx.memo,
-          signerData,
-        );
-      }
+      
+      const { bodyBytes, signatures } = await lavasigner.sign(
+        signerAddress,
+        props.tx.msgs,
+        props.tx.fee,
+        props.tx.memo,
+        signerData,
+      );
 
       // check existing signatures
       const bases64EncodedSignature = toBase64(signatures[0]);
