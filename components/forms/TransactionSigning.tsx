@@ -163,7 +163,7 @@ const TransactionSigning = (props: TransactionSigningProps) => {
           ...lavajs.lavanetAminoConverters,
         }),
       });
-      const lavasigner = await lavajs.getSigningLavanetClient({rpcEndpoint:"",signer:offlineSigner})
+      const lavasigner = await lavajs.getSigningLavanetClient({rpcEndpoint:"https://public-rpc-testnet2.lavanet.xyz:443/rpc/",signer:offlineSigner})
       const signerData = {
         accountNumber: props.tx.accountNumber,
         sequence: props.tx.sequence,
