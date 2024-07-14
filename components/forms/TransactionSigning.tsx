@@ -147,11 +147,30 @@ const TransactionSigning = (props: TransactionSigningProps) => {
       setLoading((newLoading) => ({ ...newLoading, signing: true }));
 
       const offlineSigner =
-        walletType === "Keplr" ? window.getOfflineSignerOnlyAmino(chain.chainId) : ledgerSigner;
+        walletType === "Keplr" ? window.getOfflineSigner(chain.chainId) : ledgerSigner;
 
       const signerAddress = walletAccount?.bech32Address;
       assert(signerAddress, "Missing signer address");
-      const signingClient = await SigningStargateClient.offline(offlineSigner, {
+      // const signingClient = await SigningStargateClient.offline(offlineSigner, {
+      //   registry: new Registry([
+      //     ...defaultRegistryTypes,
+      //     ...wasmTypes,
+      //     ...lavajs.lavanetProtoRegistry,
+      //   ]),
+      //   aminoTypes: new AminoTypes({
+      //     ...createDefaultAminoConverters(),
+      //     ...createWasmAminoConverters(),
+      //     ...lavajs.lavanetAminoConverters,
+      //   }),
+      // });
+      // const lavasigner = await lavajs.getSigningLavanetClient({rpcEndpoint:"https://public-rpc-testnet2.lavanet.xyz:443/rpc/", signer:offlineSigner})
+      const signerData = {
+        accountNumber: props.tx.accountNumber,
+        sequence: props.tx.sequence,
+        chainId: chain.chainId,
+      };
+
+      const lavasigner = await SigningStargateClient.offline(offlineSigner, {
         registry: new Registry([
           ...defaultRegistryTypes,
           ...wasmTypes,
@@ -162,15 +181,9 @@ const TransactionSigning = (props: TransactionSigningProps) => {
           ...createWasmAminoConverters(),
           ...lavajs.lavanetAminoConverters,
         }),
-      });
-
-      const signerData = {
-        accountNumber: props.tx.accountNumber,
-        sequence: props.tx.sequence,
-        chainId: chain.chainId,
-      };
-
-      const { bodyBytes, signatures } = await signingClient.sign(
+      })
+      
+      const { bodyBytes, signatures } = await lavasigner.sign(
         signerAddress,
         props.tx.msgs,
         props.tx.fee,
