@@ -147,7 +147,7 @@ const TransactionSigning = (props: TransactionSigningProps) => {
       setLoading((newLoading) => ({ ...newLoading, signing: true }));
 
       const offlineSigner =
-        walletType === "Keplr" ? window.getOfflineSignerOnlyAmino(chain.chainId) : ledgerSigner;
+        walletType === "Keplr" ? window.getOfflineSigner(chain.chainId) : ledgerSigner;
 
       const signerAddress = walletAccount?.bech32Address;
       assert(signerAddress, "Missing signer address");
@@ -170,13 +170,25 @@ const TransactionSigning = (props: TransactionSigningProps) => {
         chainId: chain.chainId,
       };
 
-      const { bodyBytes, signatures } = await lavasigner.sign(
-        signerAddress,
-        props.tx.msgs,
-        props.tx.fee,
-        props.tx.memo,
-        signerData,
-      );
+      if (lavasigner.signDirect) {
+        console.log("signing direct")
+        const { bodyBytes, signatures } = await lavasigner.signDirect(
+          signerAddress,
+          props.tx.msgs,
+          props.tx.fee,
+          props.tx.memo,
+          signerData,
+        );
+      } else {
+        console.log("signing normal")
+        const { bodyBytes, signatures } = await lavasigner.sign(
+          signerAddress,
+          props.tx.msgs,
+          props.tx.fee,
+          props.tx.memo,
+          signerData,
+        );
+      }
 
       // check existing signatures
       const bases64EncodedSignature = toBase64(signatures[0]);
