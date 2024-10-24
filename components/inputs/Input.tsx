@@ -7,7 +7,7 @@ interface InputProps
 }
 
 const Input = (props: InputProps) => (
-  <div className="text-input">
+  <div className={`text-input ${props.className || ""}`}>
     <label>{props.label || ""}</label>
     <input
       type={props.type || "text"}
