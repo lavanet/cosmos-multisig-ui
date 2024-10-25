@@ -13,9 +13,8 @@ import { MsgCodecs, MsgTypeUrls } from "../../../../types/txMsg";
 import Input from "../../../inputs/Input";
 import Select from "../../../inputs/Select";
 import StackableContainer from "../../../layout/StackableContainer";
-import { add as addDate, differenceInSeconds } from 'date-fns'
-import { preinit } from "react-dom";
-import { nullValueFromJSON } from "@lavanet/lavajs/dist/codegen/google/protobuf/struct";
+import { add as addDate, differenceInSeconds } from "date-fns";
+
 
 const UNIT_VESTING_PERIODS = {
   HOURS: "hours",
@@ -26,7 +25,7 @@ const UNIT_VESTING_PERIODS = {
 interface PeriodicVestingPeriod {
   amount: string;
   length: string; // in seconds
-  unit: typeof UNIT_VESTING_PERIODS[keyof typeof UNIT_VESTING_PERIODS];
+  unit: (typeof UNIT_VESTING_PERIODS)[keyof typeof UNIT_VESTING_PERIODS];
 }
 
 interface MsgCreatePeriodicVestingAccountFormProps {
@@ -66,7 +65,6 @@ const MsgCreatePeriodicVestingAccount = ({
   const { chain } = useChains();
 
   const [toAddress, setToAddress] = useState("");
-  // const [amount, setAmount] = useState("0");
   const [startTime, setEndTime] = useState(
     datetimeLocalFromTimestamp(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default is one month from now
   );
@@ -82,8 +80,8 @@ const MsgCreatePeriodicVestingAccount = ({
 
   const trimmedInputs = trimStringsObj({ toAddress, startTime });
   const updateShowRepeatState = (index: number, showRepeat: boolean) => {
-    setShowRepeatState(map => new Map(map.set(index, showRepeat)));
-  }
+    setShowRepeatState((map) => new Map(map.set(index, showRepeat)));
+  };
 
   const addVestingPeriod = (period: Partial<PeriodicVestingPeriod> = {}) => {
     const { amount = "", length = "", unit = UNIT_VESTING_PERIODS.SECONDS } = period;
@@ -103,7 +101,11 @@ const MsgCreatePeriodicVestingAccount = ({
     setVestingPeriods(updatedPeriods);
   };
 
-  const updateVestingPeriod = (index: number, field: keyof PeriodicVestingPeriod, value: string) => {
+  const updateVestingPeriod = (
+    index: number,
+    field: keyof PeriodicVestingPeriod,
+    value: string,
+  ) => {
     const updatedPeriods = vestingPeriods.map((period, i) =>
       i === index ? { ...period, [field]: value } : period,
     );
@@ -111,20 +113,18 @@ const MsgCreatePeriodicVestingAccount = ({
   };
 
   useEffect(() => {
-    const { toAddress, startTime } = trimmedInputs;
+    const { toAddress: trimmedToAddress, startTime: trimmedStartTime } = trimmedInputs;
 
     const isMsgValid = (): boolean => {
       setToAddressError("");
       setAmountError("");
       setEndTimeError("");
 
-      const addressErrorMsg = checkAddress(toAddress, chain.addressPrefix);
+      const addressErrorMsg = checkAddress(trimmedToAddress, chain.addressPrefix);
       if (addressErrorMsg) {
         setToAddressError(`Invalid address for network ${chain.chainId}: ${addressErrorMsg}`);
         return false;
       }
-
-
 
       try {
         vestingPeriods.forEach((period) => {
@@ -134,13 +134,21 @@ const MsgCreatePeriodicVestingAccount = ({
         setAmountError(e instanceof Error ? e.message : "Could not set decimals");
         return false;
       }
-      //validate vesting length
-      if (vestingPeriods.length === 0 || vestingPeriods.some(period => period.length.trim() === "" || Number(period.length) <= 0 || !Number.isInteger(Number(period.length)))) {
+      // validate vesting length
+      if (
+        vestingPeriods.length === 0 ||
+        vestingPeriods.some(
+          (period) =>
+            period.length.trim() === "" ||
+            Number(period.length) <= 0 ||
+            !Number.isInteger(Number(period.length)),
+        )
+      ) {
         setEndTimeError("Vesting length must be specified and must be a positive number");
         return false;
       }
 
-      const timeoutDate = new Date(Number(timestampFromDatetimeLocal(startTime, "ms")));
+      const timeoutDate = new Date(Number(timestampFromDatetimeLocal(trimmedStartTime, "ms")));
       if (timeoutDate <= new Date()) {
         setEndTimeError("End time must be a date in the future");
         return false;
@@ -148,7 +156,6 @@ const MsgCreatePeriodicVestingAccount = ({
 
       return true;
     };
-
 
     const convertToMicro = (amount?: string) => {
       try {
@@ -159,25 +166,27 @@ const MsgCreatePeriodicVestingAccount = ({
       } catch {
         return null;
       }
-    }
-
+    };
 
     const vestingPeriodsConverted = vestingPeriods.map((period) => {
       const convertedAmount = convertToMicro(period.amount);
       return {
-        amount: convertedAmount ? [{ ...convertedAmount }] : [], 
+        amount: convertedAmount ? [{ ...convertedAmount }] : [],
         length: BigInt(formatLengthVestingPeriod(period.length, period.unit)), // Ensure it's in seconds
       };
     });
 
     const msgValue = MsgCodecs[MsgTypeUrls.CreatePeriodicVestingAccount].fromPartial({
       fromAddress,
-      toAddress,
-      startTime: timestampFromDatetimeLocal(startTime, "s"),
+      toAddress: trimmedToAddress,
+      startTime: timestampFromDatetimeLocal(trimmedStartTime, "s"),
       vestingPeriods: vestingPeriodsConverted,
     });
 
-    const msg: EncodeObject = { typeUrl: MsgTypeUrls.CreatePeriodicVestingAccount, value: msgValue };
+    const msg: EncodeObject = {
+      typeUrl: MsgTypeUrls.CreatePeriodicVestingAccount,
+      value: msgValue,
+    };
 
     setMsgGetter({ isMsgValid, msg });
   }, [
@@ -231,7 +240,6 @@ const MsgCreatePeriodicVestingAccount = ({
         </div>
       </div>
 
-
       {vestingPeriods.map((period, index) => (
         <StackableContainer key={index} lessMargin lessPadding lessRadius>
           <div className="form-item relative">
@@ -248,7 +256,7 @@ const MsgCreatePeriodicVestingAccount = ({
                 onChange={({ target }) => updateVestingPeriod(index, "amount", target.value)}
                 error={amountError}
               />
-              <div className="flex items-center justify-between mt-5">
+              <div className="mt-5 flex items-center justify-between">
                 <Input
                   type="number"
                   width={"79%"}
@@ -260,14 +268,14 @@ const MsgCreatePeriodicVestingAccount = ({
                 />
                 <Select
                   isSearchable={false}
-                  className="self-end w-1/5"
+                  className="w-1/5 self-end"
                   options={[
                     { value: UNIT_VESTING_PERIODS.SECONDS, label: UNIT_VESTING_PERIODS.SECONDS },
-                    { value: UNIT_VESTING_PERIODS.HOURS, label: UNIT_VESTING_PERIODS.HOURS},
+                    { value: UNIT_VESTING_PERIODS.HOURS, label: UNIT_VESTING_PERIODS.HOURS },
                     { value: UNIT_VESTING_PERIODS.DAYS, label: UNIT_VESTING_PERIODS.DAYS },
                   ]}
                   value={{ value: period.unit, label: period.unit }}
-                  onChange={(target: any) => updateVestingPeriod(index, "unit", target.value)}
+                  onChange={(target: { value: string }) => updateVestingPeriod(index, "unit", target.value)}
                 />
               </div>
             </div>
@@ -277,7 +285,11 @@ const MsgCreatePeriodicVestingAccount = ({
               <button type="button" className="add ml-1" onClick={() => addVestingPeriod(period)}>
                 Repeat to end
               </button>
-              <button type="button" className="add ml-1" onClick={() => updateShowRepeatState(index, true)}>
+              <button
+                type="button"
+                className="add ml-1"
+                onClick={() => updateShowRepeatState(index, true)}
+              >
                 Repeat N times
               </button>
             </div>
@@ -290,7 +302,7 @@ const MsgCreatePeriodicVestingAccount = ({
                 value={repeatTimes.toString()}
                 onChange={({ target }) => setRepeatTimes(Number(target.value))}
               />
-              <div className="flex justify-between mt-3" >
+              <div className="mt-3 flex justify-between">
                 <button
                   type="button"
                   className="add mr-1 w-full"
@@ -313,7 +325,6 @@ const MsgCreatePeriodicVestingAccount = ({
                   Cancel
                 </button>
               </div>
-
             </div>
           )}
         </StackableContainer>
@@ -353,7 +364,7 @@ const MsgCreatePeriodicVestingAccount = ({
         .repeat-n-times {
           margin-top: 1.5em;
         }
-       .total-amount-label {
+        .total-amount-label {
           font-weight: bold;
           margin-bottom: 0.5em;
           display: block;

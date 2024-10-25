@@ -152,7 +152,6 @@ const TransactionSigning = (props: TransactionSigningProps) => {
 
       const signerAddress = walletAccount?.bech32Address;
       assert(signerAddress, "Missing signer address");
-      console.log('aminoConverters', Object.keys(createDefaultAminoConverters()).map((key) => key));
 
       const signingClient = await SigningStargateClient.offline(offlineSigner, {
         registry: new Registry([

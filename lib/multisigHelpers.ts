@@ -29,16 +29,12 @@ const createMultisigFromCompressedSecp256k1Pubkeys = async (
   addressPrefix: string,
   chainId: string,
 ): Promise<string> => {
-  console.log(compressedPubkeys);
   const pubkeys = compressedPubkeys.map((compressedPubkey) => {
     return {
       type: "tendermint/PubKeySecp256k1",
       value: compressedPubkey,
     };
   });
-  console.log('---debug---');
-  console.log(pubkeys);
-  console.log(threshold);
   const multisigPubkey = createMultisigThresholdPubkey(pubkeys, threshold);
   const multisigAddress = pubkeyToAddress(multisigPubkey, addressPrefix);
 
