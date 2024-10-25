@@ -1,4 +1,5 @@
 import { EncodeObject } from "@cosmjs/proto-signing";
+import BigNumber from "bignumber.js";
 import { useEffect, useState } from "react";
 import { MsgGetter } from "..";
 import { useChains } from "../../../../context/ChainsContext";
@@ -12,10 +13,12 @@ import { MsgCodecs, MsgTypeUrls } from "../../../../types/txMsg";
 import Input from "../../../inputs/Input";
 import Select from "../../../inputs/Select";
 import StackableContainer from "../../../layout/StackableContainer";
-import { set } from "date-fns";
+import { add as addDate, differenceInSeconds } from 'date-fns'
+import { preinit } from "react-dom";
+import { nullValueFromJSON } from "@lavanet/lavajs/dist/codegen/google/protobuf/struct";
 
-const UNNIT_VESTING_PERIODS = {
-  MONTH: "month",
+const UNIT_VESTING_PERIODS = {
+  HOURS: "hours",
   DAYS: "days",
   SECONDS: "seconds",
 };
@@ -23,30 +26,52 @@ const UNNIT_VESTING_PERIODS = {
 interface PeriodicVestingPeriod {
   amount: string;
   length: string; // in seconds
-  unit: typeof UNNIT_VESTING_PERIODS[keyof typeof UNNIT_VESTING_PERIODS];
+  unit: typeof UNIT_VESTING_PERIODS[keyof typeof UNIT_VESTING_PERIODS];
 }
 
-interface MsgCreateVestingAccountFormProps {
+interface MsgCreatePeriodicVestingAccountFormProps {
   readonly fromAddress: string;
   readonly setMsgGetter: (msgGetter: MsgGetter) => void;
   readonly deleteMsg: () => void;
 }
 
-const MsgCreateVestingAccountForm = ({
+function totalAmount(vestingPeriods: PeriodicVestingPeriod[]): string {
+  const amount = vestingPeriods
+    .reduce((acc, period) => acc.plus(new BigNumber(period.amount)), new BigNumber(0))
+    .toFormat();
+
+  return amount !== "0" && amount !== "NaN" ? amount : "0";
+}
+
+function formatLengthVestingPeriod(length: string, unit: string): string {
+  const start = new Date();
+  switch (unit) {
+    case UNIT_VESTING_PERIODS.DAYS: {
+      const end = addDate(start, { days: Number(length) });
+      return differenceInSeconds(end, start).toString();
+    }
+    case UNIT_VESTING_PERIODS.HOURS: {
+      const end = addDate(start, { hours: Number(length) });
+      return differenceInSeconds(end, start).toString();
+    }
+    default:
+      return length;
+  }
+}
+const MsgCreatePeriodicVestingAccount = ({
   fromAddress,
   setMsgGetter,
   deleteMsg,
-}: MsgCreateVestingAccountFormProps) => {
+}: MsgCreatePeriodicVestingAccountFormProps) => {
   const { chain } = useChains();
 
   const [toAddress, setToAddress] = useState("");
-  const [amount, setAmount] = useState("0");
+  // const [amount, setAmount] = useState("0");
   const [startTime, setEndTime] = useState(
     datetimeLocalFromTimestamp(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default is one month from now
   );
-  const [delayed, setDelayed] = useState(true);
   const [vestingPeriods, setVestingPeriods] = useState<PeriodicVestingPeriod[]>([
-    { amount: "", length: "", unit: UNNIT_VESTING_PERIODS.SECONDS },
+    { amount: "", length: "", unit: UNIT_VESTING_PERIODS.SECONDS },
   ]);
   const [showRepeatState, setShowRepeatState] = useState(new Map<number, boolean>());
   const [repeatTimes, setRepeatTimes] = useState(1);
@@ -55,16 +80,17 @@ const MsgCreateVestingAccountForm = ({
   const [amountError, setAmountError] = useState("");
   const [startTimeError, setEndTimeError] = useState("");
 
-  const trimmedInputs = trimStringsObj({ toAddress, amount, endTime: startTime });
+  const trimmedInputs = trimStringsObj({ toAddress, startTime });
   const updateShowRepeatState = (index: number, showRepeat: boolean) => {
     setShowRepeatState(map => new Map(map.set(index, showRepeat)));
   }
 
-  const addVestingPeriod = ({amount = "", length = "", unit = UNNIT_VESTING_PERIODS.SECONDS}: PeriodicVestingPeriod) => {
+  const addVestingPeriod = (period: Partial<PeriodicVestingPeriod> = {}) => {
+    const { amount = "", length = "", unit = UNIT_VESTING_PERIODS.SECONDS } = period;
     setVestingPeriods([...vestingPeriods, { amount, length, unit }]);
   };
 
-  const repeatVestingPeriods = (times: number, period: PeriodicVestingPeriod ) => {
+  const repeatVestingPeriods = (times: number, period: PeriodicVestingPeriod) => {
     const repeatedPeriods = [...vestingPeriods];
     for (let i = 0; i < times; i++) {
       repeatedPeriods.push({ amount: period.amount, length: period.length, unit: period.unit });
@@ -85,7 +111,7 @@ const MsgCreateVestingAccountForm = ({
   };
 
   useEffect(() => {
-    const { toAddress, amount, endTime } = trimmedInputs;
+    const { toAddress, startTime } = trimmedInputs;
 
     const isMsgValid = (): boolean => {
       setToAddressError("");
@@ -98,19 +124,23 @@ const MsgCreateVestingAccountForm = ({
         return false;
       }
 
-      if (!amount || Number(amount) <= 0) {
-        setAmountError("Amount must be greater than 0");
-        return false;
-      }
+
 
       try {
-        displayCoinToBaseCoin({ denom: chain.displayDenom, amount }, chain.assets);
+        vestingPeriods.forEach((period) => {
+          displayCoinToBaseCoin({ denom: chain.displayDenom, amount: period.amount }, chain.assets);
+        });
       } catch (e: unknown) {
         setAmountError(e instanceof Error ? e.message : "Could not set decimals");
         return false;
       }
+      //validate vesting length
+      if (vestingPeriods.length === 0 || vestingPeriods.some(period => period.length.trim() === "" || Number(period.length) <= 0 || !Number.isInteger(Number(period.length)))) {
+        setEndTimeError("Vesting length must be specified and must be a positive number");
+        return false;
+      }
 
-      const timeoutDate = new Date(Number(timestampFromDatetimeLocal(endTime, "ms")));
+      const timeoutDate = new Date(Number(timestampFromDatetimeLocal(startTime, "ms")));
       if (timeoutDate <= new Date()) {
         setEndTimeError("End time must be a date in the future");
         return false;
@@ -119,27 +149,31 @@ const MsgCreateVestingAccountForm = ({
       return true;
     };
 
-    const microCoin = (() => {
+
+    const convertToMicro = (amount?: string) => {
       try {
         if (!amount || amount === "0") {
           return null;
         }
-
         return displayCoinToBaseCoin({ denom: chain.displayDenom, amount }, chain.assets);
       } catch {
         return null;
       }
-    })();
+    }
 
-    const vestingPeriodsConverted = vestingPeriods.map((period) => ({
-      amount: microCoin ? [{ denom: chain.displayDenom, amount: period.amount }] : [],
-      length: BigInt(period.length), // Make sure it's in the correct format (seconds)
-    }));
+
+    const vestingPeriodsConverted = vestingPeriods.map((period) => {
+      const convertedAmount = convertToMicro(period.amount);
+      return {
+        amount: convertedAmount ? [{ ...convertedAmount }] : [], 
+        length: BigInt(formatLengthVestingPeriod(period.length, period.unit)), // Ensure it's in seconds
+      };
+    });
 
     const msgValue = MsgCodecs[MsgTypeUrls.CreatePeriodicVestingAccount].fromPartial({
       fromAddress,
       toAddress,
-      startTime: timestampFromDatetimeLocal(endTime, "s"),
+      startTime: timestampFromDatetimeLocal(startTime, "s"),
       vestingPeriods: vestingPeriodsConverted,
     });
 
@@ -151,7 +185,6 @@ const MsgCreateVestingAccountForm = ({
     chain.assets,
     chain.chainId,
     chain.displayDenom,
-    delayed,
     fromAddress,
     setMsgGetter,
     trimmedInputs,
@@ -191,96 +224,103 @@ const MsgCreateVestingAccountForm = ({
           error={startTimeError}
         />
       </div>
+      <div className="form-item">
+        <label className="total-amount-label">Total Amount:</label>
+        <div className="total-amount-value">
+          {totalAmount(vestingPeriods)} {chain.displayDenom}
+        </div>
+      </div>
+
 
       {vestingPeriods.map((period, index) => (
-        <StackableContainer lessMargin lessPadding lessRadius>
-        <div key={index} className="form-item relative">
-          <h3>Vesting Period {index + 1}</h3>
-          <button className="remove" onClick={() => removeVestingPeriod(index)}>
-            ✕
-          </button>
-          <div className="inline-form mt-5">
-            <Input
-              type="number"
-              label={`Amount (${chain.displayDenom})`}
-              name={`amount-${index}`}
-              value={period.amount}
-              onChange={({ target }) => updateVestingPeriod(index, "amount", target.value)}
-              error={amountError}
-            />
-            <div className="flex items-center justify-between mt-5">
+        <StackableContainer key={index} lessMargin lessPadding lessRadius>
+          <div className="form-item relative">
+            <h3>Vesting Period {index + 1}</h3>
+            <button className="remove" onClick={() => removeVestingPeriod(index)}>
+              ✕
+            </button>
+            <div className="inline-form mt-5">
               <Input
                 type="number"
-                width={"79%"}
-                label="Vesting Length"
-                name={`length-${index}`}
-                value={period.length}
-                onChange={({ target }) => updateVestingPeriod(index, "length", target.value)}
-                error={""}
+                label={`Amount (${chain.displayDenom})`}
+                name={`amount-${index}`}
+                value={period.amount}
+                onChange={({ target }) => updateVestingPeriod(index, "amount", target.value)}
+                error={amountError}
               />
-              <Select
-                isSearchable={false}
-                className="self-end w-1/5"
-                options={[
-                  { value: UNNIT_VESTING_PERIODS.SECONDS, label: UNNIT_VESTING_PERIODS.SECONDS },
-                  { value: UNNIT_VESTING_PERIODS.DAYS, label: UNNIT_VESTING_PERIODS.DAYS },
-                  { value: UNNIT_VESTING_PERIODS.MONTH, label: UNNIT_VESTING_PERIODS.MONTH },
-                ]}
-                value={{ value: period.unit, label: period.unit }}
-                onChange={(target: any) => updateVestingPeriod(index, "unit", target.value)}
-              />
+              <div className="flex items-center justify-between mt-5">
+                <Input
+                  type="number"
+                  width={"79%"}
+                  label="Vesting Length"
+                  name={`length-${index}`}
+                  value={period.length}
+                  onChange={({ target }) => updateVestingPeriod(index, "length", target.value)}
+                  error={""}
+                />
+                <Select
+                  isSearchable={false}
+                  className="self-end w-1/5"
+                  options={[
+                    { value: UNIT_VESTING_PERIODS.SECONDS, label: UNIT_VESTING_PERIODS.SECONDS },
+                    { value: UNIT_VESTING_PERIODS.HOURS, label: UNIT_VESTING_PERIODS.HOURS},
+                    { value: UNIT_VESTING_PERIODS.DAYS, label: UNIT_VESTING_PERIODS.DAYS },
+                  ]}
+                  value={{ value: period.unit, label: period.unit }}
+                  onChange={(target: any) => updateVestingPeriod(index, "unit", target.value)}
+                />
+              </div>
             </div>
           </div>
-        </div>
-        {!showRepeatState.get(index) ? (
-        <div className="button-group">
-          <button type="button" className="add ml-1" onClick={() => addVestingPeriod(period)}>
-            Repeat to end
-          </button>
-          <button type="button" className="add ml-1" onClick={() => updateShowRepeatState(index, true)}>
-            Repeat N times
-          </button>
-        </div>
-      ) : (
-        <div className="repeat-n-times">
-          <Input
-            type="number"
-            label="Number of repeats"
-            name="repeat-times"
-            value={repeatTimes.toString()}
-            onChange={({ target }) => setRepeatTimes(Number(target.value))}
-          />
-          <div className="flex justify-between mt-3" >
-            <button
-              type="button"
-              className="add mr-1 w-full"
-              onClick={() => {
-                repeatVestingPeriods(repeatTimes, period);
-                setRepeatTimes(1);
-                updateShowRepeatState(index, false);
-              }}
-            >
-              Repeat
-            </button>
-            <button
-              type="button"
-              className="add ml-1 w-full"
-              onClick={() => {
-                updateShowRepeatState(index, false);
-                setRepeatTimes(1);
-              }}
-            >
-              Cancel
-            </button>
-          </div>
+          {!showRepeatState.get(index) ? (
+            <div className="button-group">
+              <button type="button" className="add ml-1" onClick={() => addVestingPeriod(period)}>
+                Repeat to end
+              </button>
+              <button type="button" className="add ml-1" onClick={() => updateShowRepeatState(index, true)}>
+                Repeat N times
+              </button>
+            </div>
+          ) : (
+            <div className="repeat-n-times">
+              <Input
+                type="number"
+                label="Number of repeats"
+                name="repeat-times"
+                value={repeatTimes.toString()}
+                onChange={({ target }) => setRepeatTimes(Number(target.value))}
+              />
+              <div className="flex justify-between mt-3" >
+                <button
+                  type="button"
+                  className="add mr-1 w-full"
+                  onClick={() => {
+                    repeatVestingPeriods(repeatTimes, period);
+                    setRepeatTimes(1);
+                    updateShowRepeatState(index, false);
+                  }}
+                >
+                  Repeat
+                </button>
+                <button
+                  type="button"
+                  className="add ml-1 w-full"
+                  onClick={() => {
+                    updateShowRepeatState(index, false);
+                    setRepeatTimes(1);
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
 
-        </div>
-      )}
+            </div>
+          )}
         </StackableContainer>
       ))}
-      <button type="button" className="add mr-1 mt-5 text-xl" onClick={addVestingPeriod}>
-            +
-      </button> 
+      <button type="button" className="add mr-1 mt-5 text-xl" onClick={() => addVestingPeriod()}>
+        +
+      </button>
 
       <style jsx>{`
         .form-item {
@@ -290,7 +330,6 @@ const MsgCreateVestingAccountForm = ({
           background: rgba(255, 255, 255, 0.2);
           width: 100%;
           height: 30px;
-          // font-size: 1em;
           border-radius: 9px;
           border: none;
           color: white;
@@ -312,13 +351,24 @@ const MsgCreateVestingAccountForm = ({
           margin-top: 1.5em;
         }
         .repeat-n-times {
-          // display: flex;
-          // gap: 1em;
           margin-top: 1.5em;
+        }
+       .total-amount-label {
+          font-weight: bold;
+          margin-bottom: 0.5em;
+          display: block;
+        }
+        .total-amount-value {
+          background: rgba(255, 255, 255, 0.1);
+          padding: 0.5em;
+          border-radius: 5px;
+          text-align: center;
+          font-size: 1.2em;
+          color: #fff;
         }
       `}</style>
     </StackableContainer>
   );
 };
 
-export default MsgCreateVestingAccountForm;
+export default MsgCreatePeriodicVestingAccount;
