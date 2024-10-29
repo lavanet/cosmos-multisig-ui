@@ -23,6 +23,7 @@ import { DbSignature, DbTransaction, WalletAccount } from "../../types";
 import HashView from "../dataViews/HashView";
 import Button from "../inputs/Button";
 import StackableContainer from "../layout/StackableContainer";
+import { createPeriodicVestingAccount, periodicVestingTypes } from "@/lib/periodicVestingAccountDecoder";
 
 interface TransactionSigningProps {
   readonly signatures: DbSignature[];
@@ -151,16 +152,19 @@ const TransactionSigning = (props: TransactionSigningProps) => {
 
       const signerAddress = walletAccount?.bech32Address;
       assert(signerAddress, "Missing signer address");
+
       const signingClient = await SigningStargateClient.offline(offlineSigner, {
         registry: new Registry([
           ...defaultRegistryTypes,
           ...wasmTypes,
           ...lavajs.lavanetProtoRegistry,
+          ...periodicVestingTypes
         ]),
         aminoTypes: new AminoTypes({
           ...createDefaultAminoConverters(),
           ...createWasmAminoConverters(),
           ...lavajs.lavanetAminoConverters,
+          ...createPeriodicVestingAccount()
         }),
       });
 

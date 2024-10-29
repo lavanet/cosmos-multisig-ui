@@ -209,6 +209,12 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
                 onClick={() => addMsgType(MsgTypeUrls.CreateVestingAccount)}
               />
             </li>
+            <li>
+              <Button
+                label="MsgCreatePeriodicVestingAccount"
+                onClick={() => addMsgType(MsgTypeUrls.CreatePeriodicVestingAccount)}
+              />
+            </li>
           </ul>
         </div>
         <div className="btn-cluster">

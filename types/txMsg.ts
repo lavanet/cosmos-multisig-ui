@@ -9,7 +9,7 @@ import {
   MsgDelegate,
   MsgUndelegate,
 } from "cosmjs-types/cosmos/staking/v1beta1/tx";
-import { MsgCreateVestingAccount } from "cosmjs-types/cosmos/vesting/v1beta1/tx";
+import { MsgCreateVestingAccount, MsgCreatePeriodicVestingAccount } from "cosmjs-types/cosmos/vesting/v1beta1/tx";
 import {
   MsgExecuteContract,
   MsgInstantiateContract,
@@ -37,11 +37,13 @@ export const MsgTypeUrls = {
   DualRedelegate: "/lavanet.lava.dualstaking.MsgRedelegate",
   DualUnbond: "/lavanet.lava.dualstaking.MsgUnbond",
   DualClaimRewards: "/lavanet.lava.dualstaking.MsgClaimRewards",
+  CreatePeriodicVestingAccount: "/cosmos.vesting.v1beta1.MsgCreatePeriodicVestingAccount",
 } as const;
 
 export type MsgTypeUrl = (typeof MsgTypeUrls)[keyof typeof MsgTypeUrls];
 
 export const MsgCodecs = {
+  [MsgTypeUrls.CreatePeriodicVestingAccount]: MsgCreatePeriodicVestingAccount,
   [MsgTypeUrls.Send]: MsgSend,
   [MsgTypeUrls.Vote]: MsgVote,
   [MsgTypeUrls.SetWithdrawAddress]: MsgSetWithdrawAddress,

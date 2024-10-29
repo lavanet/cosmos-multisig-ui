@@ -17,6 +17,7 @@ import MsgSetWithdrawAddressForm from "./MsgSetWithdrawAddressForm";
 import MsgTransferForm from "./MsgTransferForm";
 import MsgUndelegateForm from "./MsgUndelegateForm";
 import MsgVoteForm from "./MsgVoteForm";
+import MsgCreatePeriodicVestingAccount from "./MsgCreatePeriodicVestingAccount";
 
 interface MsgFormProps {
   readonly msgType: MsgTypeUrl;
@@ -61,6 +62,8 @@ const MsgForm = ({ msgType, senderAddress, ...restProps }: MsgFormProps) => {
       return <MsgDualUnbondForm delegatorAddress={senderAddress} {...restProps} />;
     case MsgTypeUrls.DualClaimRewards:
       return <MsgDualClaimRewardsForm delegatorAddress={senderAddress} {...restProps} />;
+    case MsgTypeUrls.CreatePeriodicVestingAccount:
+      return <MsgCreatePeriodicVestingAccount fromAddress={senderAddress} {...restProps} />;
     default:
       return null;
   }
