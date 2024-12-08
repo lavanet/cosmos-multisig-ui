@@ -8,6 +8,7 @@ import TxMsgClaimRewardsDetails from "./TxMsgClaimRewardsDetails";
 import TxMsgCreateVestingAccountDetails from "./TxMsgCreateVestingAccountDetails";
 import TxMsgDelegateDetails from "./TxMsgDelegateDetails";
 import TxMsgDualClaimRewardsDetails from "./TxMsgDualClaimRewardsDetails";
+import TxMsgCreatePeriodicVestingAccountDetails from "./TxMsgCreatePeriodicVestingAccountDetails";
 import TxMsgDualDelegateDetails from "./TxMsgDualDelegateDetails";
 import TxMsgDualRedelegateDetails from "./TxMsgDualRedelegateDetails";
 import TxMsgDualUnbondDetails from "./TxMsgDualUnbondDetails";
@@ -58,6 +59,8 @@ const TxMsgDetails = ({ typeUrl, value: msgValue }: EncodeObject) => {
       return <TxMsgDualUnbondDetails msgValue={msgValue} />;
     case MsgTypeUrls.DualClaimRewards:
       return <TxMsgDualClaimRewardsDetails msgValue={msgValue} />;
+    case MsgTypeUrls.CreatePeriodicVestingAccount: 
+      return <TxMsgCreatePeriodicVestingAccountDetails msgValue={msgValue} />;
     default:
       return null;
   }
