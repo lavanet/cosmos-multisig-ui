@@ -35,7 +35,9 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
   } = useChains();
 
   const [processing, setProcessing] = useState(false);
-  const [msgTypes, setMsgTypes] = useState<readonly MsgTypeUrl[]>([]);
+  const [msgTypes, setMsgTypes] = useState<readonly [MsgTypeUrl, EncodeObject["value"] | undefined][]>([]);
+  // const [msgTypes, setMsgTypes] = useState<readonly MsgTypeUrl[]>([]);
+
   const [msgKeys, setMsgKeys] = useState<readonly string[]>([]);
   const msgGetters = useRef<MsgGetter[]>([]);
   const [sequence, setSequence] = useState(accountOnChain.sequence);
@@ -44,21 +46,65 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
   const [gasLimit, setGasLimit] = useState(gasOfTx([]));
   const [gasLimitError, setGasLimitError] = useState("");
 
-  const addMsgType = (newMsgType: MsgTypeUrl) => {
+  const addMsgType = (newMsgType: MsgTypeUrl, msg?: EncodeObject["value"]) => {
     setMsgKeys((oldMsgKeys) => [...oldMsgKeys, crypto.randomUUID()]);
     setMsgTypes((oldMsgTypes) => {
-      const newMsgTypes = [...oldMsgTypes, newMsgType];
-      setGasLimit(gasOfTx(newMsgTypes));
+      const newMsgTypes: [MsgTypeUrl, EncodeObject["value"] | undefined][] = [...oldMsgTypes, [newMsgType, msg]];
+      setGasLimit(gasOfTx(newMsgTypes.map(([msgType]) => msgType)));
       return newMsgTypes;
     });
   };
 
-  const addMsgWithValidator = (newMsgType: MsgTypeUrl) => {
+  const addMsgWithValidator = (newMsgType: MsgTypeUrl, msg?: EncodeObject["value"]) => {
     if (!validators.length) {
       loadValidators(chainsDispatch);
     }
 
-    addMsgType(newMsgType);
+    addMsgType(newMsgType, msg);
+  };
+  const [fileError, setFileError] = useState<string>("");
+  const handleFileMessages = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      setFileError("No file selected");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        // Assuming the file contains JSON data for simplicity
+        const parsedContent = JSON.parse(content) as unknown;
+
+        // Perform necessary validation or state updates
+        if(!Array.isArray(parsedContent)) { 
+          setFileError("Invalid file format. Please upload a valid messages");
+          return;
+        }
+        for (const msg of parsedContent) {
+          if (!msg.typeUrl || !msg.value || typeof msg.typeUrl !== "string" || typeof msg.value !== "object") {
+            setFileError("Invalid file format. Please upload a valid messages");
+            return;
+          }
+          const validatorMsgsType = [MsgTypeUrls.WithdrawDelegatorReward]
+          if(validatorMsgsType.includes(msg.typeUrl)) {
+            addMsgWithValidator(msg.typeUrl, msg.value);
+            continue;
+          }
+
+          addMsgType(msg.typeUrl, msg.value);
+        }
+        toastSuccess("Messages added from file");
+        setFileError(""); // Clear any previous errors
+      } catch (err) {
+        setFileError("Invalid file format. Please upload a valid JSON");
+      }
+    };
+    reader.onerror = () => {
+      setFileError("Error reading file. Please try again.");
+    };
+    reader.readAsText(file);
   };
 
   const createTx = async () => {
@@ -119,8 +165,9 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
     >
       <h2>Create New Transaction</h2>
       {msgTypes.length ? (
-        msgTypes.map((msgType, index) => (
+        msgTypes.map(([msgType, msgValue], index) => (
           <MsgForm
+            msg={msgValue}
             key={msgKeys[index]}
             msgType={msgType}
             senderAddress={senderAddress}
@@ -138,9 +185,9 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
                 ...oldMsgKeys.slice(index + 1),
               ]);
               setMsgTypes((oldMsgTypes) => {
-                const newMsgTypes: MsgTypeUrl[] = oldMsgTypes.slice();
+                const newMsgTypes: [MsgTypeUrl, EncodeObject["value"] | undefined][] = oldMsgTypes.slice();
                 newMsgTypes.splice(index, 1);
-                setGasLimit(gasOfTx(newMsgTypes));
+                setGasLimit(gasOfTx(newMsgTypes.map(([msgType]) => msgType)));
                 return newMsgTypes;
               });
             }}
@@ -306,6 +353,15 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
           </ul>
         </div>
       </div>
+      <StackableContainer lessMargin lessPadding>
+      <Input
+          type="file"
+          label="Upload messages from file"
+          name="trx-file"
+          onChange={handleFileMessages}
+       />
+       {fileError && <p className="multisig-error">{fileError}</p>}
+      </StackableContainer>
       <Button
         label="Create Transaction"
         onClick={createTx}

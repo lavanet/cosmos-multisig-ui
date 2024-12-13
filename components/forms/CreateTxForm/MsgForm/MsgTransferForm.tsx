@@ -10,6 +10,8 @@ import { checkAddress, exampleAddress, trimStringsObj } from "../../../../lib/di
 import { MsgCodecs, MsgTypeUrls } from "../../../../types/txMsg";
 import Input from "../../../inputs/Input";
 import StackableContainer from "../../../layout/StackableContainer";
+import { EncodeObject } from "@cosmjs/proto-signing";
+
 
 const humanTimestampOptions = [
   { label: "12 hours from now", value: 12 * 60 * 60 * 1000 },
@@ -26,21 +28,24 @@ const humanTimestampOptions = [
 interface MsgTransferFormProps {
   readonly fromAddress: string;
   readonly setMsgGetter: (msgGetter: MsgGetter) => void;
+  readonly msg: EncodeObject["value"]; 
   readonly deleteMsg: () => void;
 }
 
-const MsgTransferForm = ({ fromAddress, setMsgGetter, deleteMsg }: MsgTransferFormProps) => {
+const MsgTransferForm = ({ fromAddress, setMsgGetter, deleteMsg, msg }: MsgTransferFormProps) => {
   const { chain } = useChains();
+  const msgValue = msg as MsgTransferEncodeObject["value"];
 
-  const [toAddress, setToAddress] = useState("");
-  const [denom, setDenom] = useState("");
-  const [amount, setAmount] = useState("0");
-  const [sourcePort, setSourcePort] = useState("transfer");
-  const [sourceChannel, setSourceChannel] = useState("");
+  const [toAddress, setToAddress] = useState(msgValue?.receiver ?? "");
+  const [denom, setDenom] = useState(msgValue?.token?.denom ?? "");
+  const [amount, setAmount] = useState(msgValue?.token?.amount ?? "0");
+
+  const [sourcePort, setSourcePort] = useState(msgValue?.sourcePort ?? "transfer");
+  const [sourceChannel, setSourceChannel] = useState(msgValue?.sourceChannel ?? "channel-0");
   const [timeout, setTimeout] = useState(
-    datetimeLocalFromTimestamp(Date.now() + humanTimestampOptions[0].value),
+    msgValue?.timeoutTimestamp ? datetimeLocalFromTimestamp(BigInt(msgValue?.timeoutTimestamp), 'ns') : datetimeLocalFromTimestamp(Date.now() + humanTimestampOptions[0].value),
   );
-  const [memo, setMemo] = useState("");
+  const [memo, setMemo] = useState(msgValue?.memo ?? "");
 
   const [toAddressError, setToAddressError] = useState("");
   const [denomError, setDenomError] = useState("");

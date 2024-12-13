@@ -1,8 +1,7 @@
-import { EncodeObject } from "@cosmjs/proto-signing";
 import { useEffect, useState } from "react";
 import { MsgGetter } from "..";
 import { useChains } from "../../../../context/ChainsContext";
-import { displayCoinToBaseCoin } from "../../../../lib/coinHelpers";
+import { displayCoinToBaseCoin, baseCoinToDisplayCoin } from "../../../../lib/coinHelpers";
 import {
   datetimeLocalFromTimestamp,
   timestampFromDatetimeLocal,
@@ -11,29 +10,39 @@ import { checkAddress, exampleAddress, trimStringsObj } from "../../../../lib/di
 import { MsgCodecs, MsgTypeUrls } from "../../../../types/txMsg";
 import Input from "../../../inputs/Input";
 import StackableContainer from "../../../layout/StackableContainer";
+import { EncodeObject } from "@cosmjs/proto-signing";
 
 interface MsgCreateVestingAccountFormProps {
   readonly fromAddress: string;
   readonly setMsgGetter: (msgGetter: MsgGetter) => void;
   readonly deleteMsg: () => void;
+  readonly msg: EncodeObject["value"];
 }
 
 const MsgCreateVestingAccountForm = ({
   fromAddress,
   setMsgGetter,
+  msg,
   deleteMsg,
 }: MsgCreateVestingAccountFormProps) => {
   const { chain } = useChains();
+  const msgValue = msg;
 
-  const [toAddress, setToAddress] = useState("");
-  const [amount, setAmount] = useState("0");
+
+
+  const [toAddress, setToAddress] = useState(msgValue?.toAddress ?? "");
+  const amountFromMsg = msgValue?.amount?.[0]?.amount;
+  const [amount, setAmount] = useState(amountFromMsg ? baseCoinToDisplayCoin({
+    amount: amountFromMsg,
+    denom: msgValue?.amount?.[0]?.denom
+  }, chain.assets).amount : "0");
   const [endTime, setEndTime] = useState(
+    msgValue?.endTime ? datetimeLocalFromTimestamp(BigInt(msgValue?.endTime), "s") : 
     datetimeLocalFromTimestamp(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default is one month from now
   );
-  const [delayed, setDelayed] = useState(true);
+  const [delayed, setDelayed] = useState(msgValue?.delayed ?? true);
 
-  const [toAddressError, setToAddressError] = useState("");
-  const [amountError, setAmountError] = useState("");
+  const [toAddressError, setToAddressError] = useState("");  const [amountError, setAmountError] = useState("");
   const [endTimeError, setEndTimeError] = useState("");
 
   const trimmedInputs = trimStringsObj({ toAddress, amount, endTime });
