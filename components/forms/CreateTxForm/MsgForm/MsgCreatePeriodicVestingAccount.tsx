@@ -14,7 +14,6 @@ import Input from "../../../inputs/Input";
 import Select from "../../../inputs/Select";
 import StackableContainer from "../../../layout/StackableContainer";
 import { add as addDate, differenceInSeconds } from "date-fns";
-import { ms } from "date-fns/locale";
 
 
 const UNIT_VESTING_PERIODS = {
@@ -59,6 +58,13 @@ function formatLengthVestingPeriod(length: string, unit: string): string {
       return length;
   }
 }
+interface VestingPeriod {
+  amount: {
+    amount: string;
+    denom: string;
+  }[];
+  length: number;
+}
 const MsgCreatePeriodicVestingAccount = ({
   fromAddress,
   setMsgGetter,
@@ -74,7 +80,9 @@ const MsgCreatePeriodicVestingAccount = ({
       ? datetimeLocalFromTimestamp(BigInt(msgValue?.startTime), "s")
       : datetimeLocalFromTimestamp(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default is one month from now
   );
-  const defaultVestingPeriods = msgValue?.vestingPeriods ? msgValue?.vestingPeriods?.map((period: any) => ({
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore 
+  const defaultVestingPeriods = msgValue?.vestingPeriods ? msgValue?.vestingPeriods?.map((period: VestingPeriod) => ({
     amount: baseCoinToDisplayCoin({ amount: period.amount[0].amount, denom: period.amount[0].denom }, chain.assets).amount, 
     length: period.length,
     unit: UNIT_VESTING_PERIODS.SECONDS,

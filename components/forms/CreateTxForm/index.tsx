@@ -187,7 +187,7 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
               setMsgTypes((oldMsgTypes) => {
                 const newMsgTypes: [MsgTypeUrl, EncodeObject["value"] | undefined][] = oldMsgTypes.slice();
                 newMsgTypes.splice(index, 1);
-                setGasLimit(gasOfTx(newMsgTypes.map(([msgType]) => msgType)));
+                setGasLimit(gasOfTx(newMsgTypes.map(([m]) => m )));
                 return newMsgTypes;
               });
             }}

@@ -24,7 +24,6 @@ const MsgClaimRewardsForm = ({
 }: MsgClaimRewardsFormProps) => {
   const { chain } = useChains();
   const msgValue = msg;
-  console.log('===>', msgValue);
 
   const [validatorAddress, setValidatorAddress] = useState(msgValue?.validatorAddress ?? "");
   const [validatorAddressError, setValidatorAddressError] = useState("");

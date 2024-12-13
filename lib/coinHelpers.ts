@@ -36,7 +36,7 @@ export const findAssetAndUnits = (
   return { asset, baseUnit, targetUnit };
 };
 // todo: fix repeated code
-const displayCoinToBaseCoin = (displayCoin: Coin, assets: readonly RegistryAsset[]): Coin => {
+export const displayCoinToBaseCoin = (displayCoin: Coin, assets: readonly RegistryAsset[]): Coin => {
   const lowerCaseDenom = displayCoin.denom.toLowerCase();
 
   const asset = assets.find(
