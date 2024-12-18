@@ -20,9 +20,9 @@ export const getProvidersNext = async (
   rpcEndpoint: string,
 ): Promise<readonly ProviderMetadata[]> => {
   const queryClient = await lavajs.lavanet.ClientFactory.createRPCQueryClient({ rpcEndpoint });
-  const { metaData }= await queryClient.lavanet.lava.epochstorage.providerMetaData({
+  const { metaData } = await queryClient.lavanet.lava.epochstorage.providerMetaData({
     provider: "",
   });
 
   return metaData.sort((a, b) => a.description.moniker.localeCompare(b.description.moniker));
-}
+};

@@ -21,19 +21,26 @@ const MsgDualRedelegateForm = ({
   delegatorAddress,
   setMsgGetter,
   deleteMsg,
-  msg
+  msg: msgProps,
 }: MsgDualRedelegateFormProps) => {
   const { chain } = useChains();
 
-  const [fromProviderAddress, setFromProviderAddress] = useState(msg?.fromProvider ?? "");
-  const [toProviderAddress, setToProviderAddress] = useState(msg?.toProvider ?? "");
-  const [fromChainID, setFromChainID] = useState(msg?.fromChainID ?? "");
-  const [toChainID, setToChainID] = useState(msg?.toChainID ?? "");
-  const amountFromMsg = msg?.amount?.amount;
-  const [amount, setAmount] = useState(amountFromMsg ? baseCoinToDisplayCoin({ 
-    amount: amountFromMsg, 
-    denom: msg?.amount?.denom
-  }, chain.assets).amount : "0");
+  const [fromProviderAddress, setFromProviderAddress] = useState(msgProps?.fromProvider ?? "");
+  const [toProviderAddress, setToProviderAddress] = useState(msgProps?.toProvider ?? "");
+  const [fromChainID, setFromChainID] = useState(msgProps?.fromChainID ?? "");
+  const [toChainID, setToChainID] = useState(msgProps?.toChainID ?? "");
+  const amountFromMsg = msgProps?.amount?.amount;
+  const [amount, setAmount] = useState(
+    amountFromMsg
+      ? baseCoinToDisplayCoin(
+          {
+            amount: amountFromMsg,
+            denom: msgProps?.amount?.denom,
+          },
+          chain.assets,
+        ).amount
+      : "0",
+  );
 
   const [fromProviderAddressError, setFromProviderAddressError] = useState("");
   const [toProviderAddressError, setToProviderAddressError] = useState("");

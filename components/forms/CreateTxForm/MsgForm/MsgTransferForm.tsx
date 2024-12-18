@@ -12,7 +12,6 @@ import Input from "../../../inputs/Input";
 import StackableContainer from "../../../layout/StackableContainer";
 import { EncodeObject } from "@cosmjs/proto-signing";
 
-
 const humanTimestampOptions = [
   { label: "12 hours from now", value: 12 * 60 * 60 * 1000 },
   { label: "1 day from now", value: 24 * 60 * 60 * 1000 },
@@ -28,24 +27,30 @@ const humanTimestampOptions = [
 interface MsgTransferFormProps {
   readonly fromAddress: string;
   readonly setMsgGetter: (msgGetter: MsgGetter) => void;
-  readonly msg: EncodeObject["value"]; 
+  readonly msg: EncodeObject["value"];
   readonly deleteMsg: () => void;
 }
 
-const MsgTransferForm = ({ fromAddress, setMsgGetter, deleteMsg, msg }: MsgTransferFormProps) => {
+const MsgTransferForm = ({
+  fromAddress,
+  setMsgGetter,
+  deleteMsg,
+  msg: msgProps,
+}: MsgTransferFormProps) => {
   const { chain } = useChains();
-  const msgValue = msg as MsgTransferEncodeObject["value"];
 
-  const [toAddress, setToAddress] = useState(msgValue?.receiver ?? "");
-  const [denom, setDenom] = useState(msgValue?.token?.denom ?? "");
-  const [amount, setAmount] = useState(msgValue?.token?.amount ?? "0");
+  const [toAddress, setToAddress] = useState(msgProps?.receiver ?? "");
+  const [denom, setDenom] = useState(msgProps?.token?.denom ?? "");
+  const [amount, setAmount] = useState(msgProps?.token?.amount ?? "0");
 
-  const [sourcePort, setSourcePort] = useState(msgValue?.sourcePort ?? "transfer");
-  const [sourceChannel, setSourceChannel] = useState(msgValue?.sourceChannel ?? "channel-0");
+  const [sourcePort, setSourcePort] = useState(msgProps?.sourcePort ?? "transfer");
+  const [sourceChannel, setSourceChannel] = useState(msgProps?.sourceChannel ?? "channel-0");
   const [timeout, setTimeout] = useState(
-    msgValue?.timeoutTimestamp ? datetimeLocalFromTimestamp(BigInt(msgValue?.timeoutTimestamp), 'ns') : datetimeLocalFromTimestamp(Date.now() + humanTimestampOptions[0].value),
+    msgProps?.timeoutTimestamp
+      ? datetimeLocalFromTimestamp(BigInt(msgProps?.timeoutTimestamp), "ns")
+      : datetimeLocalFromTimestamp(Date.now() + humanTimestampOptions[0].value),
   );
-  const [memo, setMemo] = useState(msgValue?.memo ?? "");
+  const [memo, setMemo] = useState(msgProps?.memo ?? "");
 
   const [toAddressError, setToAddressError] = useState("");
   const [denomError, setDenomError] = useState("");

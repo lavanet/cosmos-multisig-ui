@@ -20,17 +20,28 @@ const MsgRedelegateForm = ({
   delegatorAddress,
   setMsgGetter,
   deleteMsg,
-  msg,
+  msg: msgProps,
 }: MsgRedelegateFormProps) => {
   const { chain } = useChains();
 
-  const [validatorSrcAddress, setValidatorSrcAddress] = useState(msg?.validatorSrcAddress ?? "");
-  const [validatorDstAddress, setValidatorDstAddress] = useState(msg?.validatorDstAddress ?? "");
-  const amountFromMsg = msg?.amount?.amount;
-  const [amount, setAmount] = useState(amountFromMsg ? baseCoinToDisplayCoin({ 
-    amount: amountFromMsg, 
-    denom: msg?.amount?.denom
-  }, chain.assets).amount : "0");
+  const [validatorSrcAddress, setValidatorSrcAddress] = useState(
+    msgProps?.validatorSrcAddress ?? "",
+  );
+  const [validatorDstAddress, setValidatorDstAddress] = useState(
+    msgProps?.validatorDstAddress ?? "",
+  );
+  const amountFromMsg = msgProps?.amount?.amount;
+  const [amount, setAmount] = useState(
+    amountFromMsg
+      ? baseCoinToDisplayCoin(
+          {
+            amount: amountFromMsg,
+            denom: msgProps?.amount?.denom,
+          },
+          chain.assets,
+        ).amount
+      : "0",
+  );
 
   const [validatorSrcAddressError, setValidatorSrcAddressError] = useState("");
   const [validatorDstAddressError, setValidatorDstAddressError] = useState("");

@@ -20,12 +20,11 @@ const MsgDualClaimRewardsForm = ({
   delegatorAddress,
   setMsgGetter,
   deleteMsg,
-  msg
+  msg: msgProps,
 }: MsgDualClaimRewardsFormProps) => {
   const { chain } = useChains();
 
-  const [chainID, setChainID] = useState(msg?.chainID ?? "");
-  const [providerAddress, setProviderAddress] = useState(msg?.provider ?? "");
+  const [providerAddress, setProviderAddress] = useState(msgProps?.provider ?? "");
   const [providerAddressError, setProviderAddressError] = useState("");
 
   const trimmedInputs = trimStringsObj({ providerAddress });

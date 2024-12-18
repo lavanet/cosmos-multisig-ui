@@ -2,7 +2,7 @@ import { MsgSendEncodeObject } from "@cosmjs/stargate";
 import { useEffect, useState } from "react";
 import { MsgGetter } from "..";
 import { useChains } from "../../../../context/ChainsContext";
-import { displayCoinToBaseCoin, baseCoinToDisplayCoin  } from "../../../../lib/coinHelpers";
+import { displayCoinToBaseCoin, baseCoinToDisplayCoin } from "../../../../lib/coinHelpers";
 import { checkAddress, exampleAddress, trimStringsObj } from "../../../../lib/displayHelpers";
 import { RegistryAsset } from "../../../../types/chainRegistry";
 import { MsgCodecs, MsgTypeUrls } from "../../../../types/txMsg";
@@ -24,29 +24,33 @@ const getDenomOptions = (assets: readonly RegistryAsset[]) => {
 interface MsgSendFormProps {
   readonly fromAddress: string;
   readonly setMsgGetter: (msgGetter: MsgGetter) => void;
-  readonly msg: EncodeObject["value"]; 
+  readonly msg: EncodeObject["value"];
   readonly deleteMsg: () => void;
 }
 
-const MsgSendForm = ({ fromAddress, setMsgGetter, deleteMsg, msg }: MsgSendFormProps) => {
+const MsgSendForm = ({ fromAddress, setMsgGetter, deleteMsg, msg: msgProps }: MsgSendFormProps) => {
   const { chain } = useChains();
-  const msgValue = msg as MsgSendEncodeObject["value"];
 
   const denomOptions = getDenomOptions(chain.assets);
-  const amountFromMsg = msgValue?.amount?.[0]?.amount;
-  if(amountFromMsg && !msgValue?.amount?.[0]?.denom) {
-    setMsgGetter({ isMsgValid: () => false, msg: { typeUrl: MsgTypeUrls.Send, value: msgValue } });
-  };
+  const amountFromMsg = msgProps?.amount?.[0]?.amount;
+  if (amountFromMsg && !msgProps?.amount?.[0]?.denom) {
+    setMsgGetter({ isMsgValid: () => false, msg: { typeUrl: MsgTypeUrls.Send, value: msgProps } });
+  }
 
-  const [toAddress, setToAddress] = useState(msgValue?.toAddress ?? "");
+  const [toAddress, setToAddress] = useState(msgProps?.toAddress ?? "");
   const [selectedDenom, setSelectedDenom] = useState(denomOptions[0]);
-  const [customDenom, setCustomDenom] = useState(msgValue?.amount?.[0]?.denom ?? "");
-  const [amount, setAmount] = useState(amountFromMsg ? baseCoinToDisplayCoin({
-    amount: amountFromMsg,
-    denom: customDenom
-  }, chain.assets).amount : "0"); 
-  
-
+  const [customDenom, setCustomDenom] = useState(msgProps?.amount?.[0]?.denom ?? "");
+  const [amount, setAmount] = useState(
+    amountFromMsg
+      ? baseCoinToDisplayCoin(
+          {
+            amount: amountFromMsg,
+            denom: customDenom,
+          },
+          chain.assets,
+        ).amount
+      : "0",
+  );
 
   const [toAddressError, setToAddressError] = useState("");
   const [customDenomError, setCustomDenomError] = useState("");
@@ -131,7 +135,7 @@ const MsgSendForm = ({ fromAddress, setMsgGetter, deleteMsg, msg }: MsgSendFormP
     selectedDenom.value,
     setMsgGetter,
     trimmedInputs,
-    msg
+    msgProps,
   ]);
 
   return (

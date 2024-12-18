@@ -22,27 +22,33 @@ interface MsgCreateVestingAccountFormProps {
 const MsgCreateVestingAccountForm = ({
   fromAddress,
   setMsgGetter,
-  msg,
+  msg: msgProps,
   deleteMsg,
 }: MsgCreateVestingAccountFormProps) => {
   const { chain } = useChains();
-  const msgValue = msg;
 
-
-
-  const [toAddress, setToAddress] = useState(msgValue?.toAddress ?? "");
-  const amountFromMsg = msgValue?.amount?.[0]?.amount;
-  const [amount, setAmount] = useState(amountFromMsg ? baseCoinToDisplayCoin({
-    amount: amountFromMsg,
-    denom: msgValue?.amount?.[0]?.denom
-  }, chain.assets).amount : "0");
-  const [endTime, setEndTime] = useState(
-    msgValue?.endTime ? datetimeLocalFromTimestamp(BigInt(msgValue?.endTime), "s") : 
-    datetimeLocalFromTimestamp(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default is one month from now
+  const [toAddress, setToAddress] = useState(msgProps?.toAddress ?? "");
+  const amountFromMsg = msgProps?.amount?.[0]?.amount;
+  const [amount, setAmount] = useState(
+    amountFromMsg
+      ? baseCoinToDisplayCoin(
+          {
+            amount: amountFromMsg,
+            denom: msgProps?.amount?.[0]?.denom,
+          },
+          chain.assets,
+        ).amount
+      : "0",
   );
-  const [delayed, setDelayed] = useState(msgValue?.delayed ?? true);
+  const [endTime, setEndTime] = useState(
+    msgProps?.endTime
+      ? datetimeLocalFromTimestamp(BigInt(msgProps?.endTime), "s")
+      : datetimeLocalFromTimestamp(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default is one month from now
+  );
+  const [delayed, setDelayed] = useState(msgProps?.delayed ?? true);
 
-  const [toAddressError, setToAddressError] = useState("");  const [amountError, setAmountError] = useState("");
+  const [toAddressError, setToAddressError] = useState("");
+  const [amountError, setAmountError] = useState("");
   const [endTimeError, setEndTimeError] = useState("");
 
   const trimmedInputs = trimStringsObj({ toAddress, amount, endTime });

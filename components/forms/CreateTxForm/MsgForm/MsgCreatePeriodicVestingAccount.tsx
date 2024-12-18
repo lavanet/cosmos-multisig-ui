@@ -15,7 +15,6 @@ import Select from "../../../inputs/Select";
 import StackableContainer from "../../../layout/StackableContainer";
 import { add as addDate, differenceInSeconds } from "date-fns";
 
-
 const UNIT_VESTING_PERIODS = {
   HOURS: "hours",
   DAYS: "days",
@@ -69,25 +68,30 @@ const MsgCreatePeriodicVestingAccount = ({
   fromAddress,
   setMsgGetter,
   deleteMsg,
-  msg,
+  msg: msgProps,
 }: MsgCreatePeriodicVestingAccountFormProps) => {
   const { chain } = useChains();
-  const msgValue = msg;
 
-  const [toAddress, setToAddress] = useState(msgValue?.toAddress ?? "");
+  const [toAddress, setToAddress] = useState(msgProps?.toAddress ?? "");
   const [startTime, setEndTime] = useState(
-    msgValue?.startTime
-      ? datetimeLocalFromTimestamp(BigInt(msgValue?.startTime), "s")
+    msgProps?.startTime
+      ? datetimeLocalFromTimestamp(BigInt(msgProps?.startTime), "s")
       : datetimeLocalFromTimestamp(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default is one month from now
   );
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore 
-  const defaultVestingPeriods = msgValue?.vestingPeriods ? msgValue?.vestingPeriods?.map((period: VestingPeriod) => ({
-    amount: baseCoinToDisplayCoin({ amount: period.amount[0].amount, denom: period.amount[0].denom }, chain.assets).amount, 
-    length: period.length,
-    unit: UNIT_VESTING_PERIODS.SECONDS,
-  })) : [{ amount: "", length: "", unit: UNIT_VESTING_PERIODS.SECONDS }];
-  const [vestingPeriods, setVestingPeriods] = useState<PeriodicVestingPeriod[]>(defaultVestingPeriods);
+  // @ts-ignore
+  const defaultVestingPeriods = msgProps?.vestingPeriods
+    ? msgProps?.vestingPeriods?.map((period: VestingPeriod) => ({
+        amount: baseCoinToDisplayCoin(
+          { amount: period.amount[0].amount, denom: period.amount[0].denom },
+          chain.assets,
+        ).amount,
+        length: period.length,
+        unit: UNIT_VESTING_PERIODS.SECONDS,
+      }))
+    : [{ amount: "", length: "", unit: UNIT_VESTING_PERIODS.SECONDS }];
+  const [vestingPeriods, setVestingPeriods] =
+    useState<PeriodicVestingPeriod[]>(defaultVestingPeriods);
   const [showRepeatState, setShowRepeatState] = useState(new Map<number, boolean>());
   const [repeatTimes, setRepeatTimes] = useState(1);
 
@@ -292,7 +296,9 @@ const MsgCreatePeriodicVestingAccount = ({
                     { value: UNIT_VESTING_PERIODS.DAYS, label: UNIT_VESTING_PERIODS.DAYS },
                   ]}
                   value={{ value: period.unit, label: period.unit }}
-                  onChange={(target: { value: string }) => updateVestingPeriod(index, "unit", target.value)}
+                  onChange={(target: { value: string }) =>
+                    updateVestingPeriod(index, "unit", target.value)
+                  }
                 />
               </div>
             </div>

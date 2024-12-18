@@ -11,7 +11,6 @@ import Input from "../../../inputs/Input";
 import StackableContainer from "../../../layout/StackableContainer";
 import { EncodeObject } from "@cosmjs/proto-signing";
 
-
 interface MsgDualDelegateFormProps {
   readonly delegatorAddress: string;
   readonly setMsgGetter: (msgGetter: MsgGetter) => void;
@@ -23,18 +22,25 @@ const MsgDualDelegateForm = ({
   delegatorAddress,
   setMsgGetter,
   deleteMsg,
-  msg
+  msg: msgProps,
 }: MsgDualDelegateFormProps) => {
   const { chain } = useChains();
 
-  const [validatorAddress, setValidatorAddress] = useState(msg?.validator ?? "");
-  const [providerAddress, setProviderAddress] = useState(msg?.provider ?? "");
-  const [chainID, setChainID] = useState(msg?.chainID ?? "");
-  const amountFromMsg = msg?.amount?.amount;
-  const [amount, setAmount] = useState(amountFromMsg ? baseCoinToDisplayCoin({ 
-    amount: amountFromMsg, 
-    denom: msg?.amount?.denom
-  }, chain.assets).amount : "0");
+  const [validatorAddress, setValidatorAddress] = useState(msgProps?.validator ?? "");
+  const [providerAddress, setProviderAddress] = useState(msgProps?.provider ?? "");
+  const [chainID, setChainID] = useState(msgProps?.chainID ?? "");
+  const amountFromMsg = msgProps?.amount?.amount;
+  const [amount, setAmount] = useState(
+    amountFromMsg
+      ? baseCoinToDisplayCoin(
+          {
+            amount: amountFromMsg,
+            denom: msgProps?.amount?.denom,
+          },
+          chain.assets,
+        ).amount
+      : "0",
+  );
 
   const [validatorAddressError, setValidatorAddressError] = useState("");
   const [providerAddressError, setProviderAddressError] = useState("");

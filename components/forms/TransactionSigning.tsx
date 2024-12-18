@@ -24,7 +24,10 @@ import { DbSignature, DbTransaction, WalletAccount } from "../../types";
 import HashView from "../dataViews/HashView";
 import Button from "../inputs/Button";
 import StackableContainer from "../layout/StackableContainer";
-import { createPeriodicVestingAccount, periodicVestingTypes } from "@/lib/periodicVestingAccountDecoder";
+import {
+  createPeriodicVestingAccount,
+  periodicVestingTypes,
+} from "@/lib/periodicVestingAccountDecoder";
 import { exportMsgToJson } from "@/lib/txMsgHelpers";
 
 interface TransactionSigningProps {
@@ -160,13 +163,13 @@ const TransactionSigning = (props: TransactionSigningProps) => {
           ...defaultRegistryTypes,
           ...wasmTypes,
           ...lavajs.lavanetProtoRegistry,
-          ...periodicVestingTypes
+          ...periodicVestingTypes,
         ]),
         aminoTypes: new AminoTypes({
           ...createDefaultAminoConverters(),
           ...createWasmAminoConverters(),
           ...lavajs.lavanetAminoConverters,
-          ...createPeriodicVestingAccount()
+          ...createPeriodicVestingAccount(),
         }),
       });
 
@@ -216,7 +219,7 @@ const TransactionSigning = (props: TransactionSigningProps) => {
     }
   };
   const downloadTransactionMessages = () => {
-    const msgJSON = props.tx.msgs.map(exportMsgToJson)
+    const msgJSON = props.tx.msgs.map(exportMsgToJson);
     const blob = new Blob([JSON.stringify(msgJSON, null, 2)], { type: "application/json" });
     saveAs(blob, "transaction_messages.json");
   };
@@ -273,13 +276,9 @@ const TransactionSigning = (props: TransactionSigningProps) => {
             )}
           </>
         ) : null}
-      
       </StackableContainer>
       <StackableContainer lessPadding lessMargin lessRadius>
-      <Button
-           label="Download transaction messages JSON"
-           onClick={downloadTransactionMessages}
-      />
+        <Button label="Download transaction messages JSON" onClick={downloadTransactionMessages} />
       </StackableContainer>
       <style jsx>{`
         p {

@@ -29,21 +29,21 @@ export const timestampFromDatetimeLocal = (
 };
 export const datetimeLocalFromTimestamp = (
   timestampParam: bigint | number,
-  unit: "ns" | "ms" | "s" = "ms"
+  unit: "ns" | "ms" | "s" = "ms",
 ): string => {
   let normalizedTimestamp;
   const timestamp = BigInt(timestampParam);
 
   switch (unit) {
     case "s":
-      normalizedTimestamp = timestamp * 1_000n; 
+      normalizedTimestamp = timestamp * 1_000n;
       break;
     case "ms":
-      normalizedTimestamp = timestamp; 
+      normalizedTimestamp = timestamp;
       break;
     case "ns":
     default:
-      normalizedTimestamp = timestamp / 1_000_000n; 
+      normalizedTimestamp = timestamp / 1_000_000n;
       break;
   }
 
@@ -63,6 +63,3 @@ export const datetimeLocalFromTimestamp = (
 
   return `${date.getFullYear()}-${monthStr}-${dayStr}T${hoursStr}:${minutesStr}`;
 };
-
-
-

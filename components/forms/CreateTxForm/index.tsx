@@ -10,7 +10,12 @@ import { useChains } from "../../../context/ChainsContext";
 import { requestJson } from "../../../lib/request";
 import { exportMsgToJson, gasOfTx } from "../../../lib/txMsgHelpers";
 import { DbTransaction } from "../../../types";
-import { MsgTypeUrl, MsgTypeUrls, SupportFileFeatureMsgTypes, validatorMsgsType } from "../../../types/txMsg";
+import {
+  MsgTypeUrl,
+  MsgTypeUrls,
+  SupportFileFeatureMsgTypes,
+  validatorMsgsType,
+} from "../../../types/txMsg";
 import Button from "../../inputs/Button";
 import Input from "../../inputs/Input";
 import StackableContainer from "../../layout/StackableContainer";
@@ -27,9 +32,8 @@ interface CreateTxFormProps {
   readonly accountOnChain: Account;
 }
 
-
-function resolveTxFileSupportLabel(msgType: MsgTypeUrl)  {
-  if (SupportFileFeatureMsgTypes.includes(msgType as typeof SupportFileFeatureMsgTypes[number])) {
+function resolveTxFileSupportLabel(msgType: MsgTypeUrl) {
+  if (SupportFileFeatureMsgTypes.includes(msgType as (typeof SupportFileFeatureMsgTypes)[number])) {
     return "File";
   }
 }
@@ -41,7 +45,9 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
   } = useChains();
 
   const [processing, setProcessing] = useState(false);
-  const [msgTypes, setMsgTypes] = useState<readonly [MsgTypeUrl, EncodeObject["value"] | undefined][]>([]);
+  const [msgTypes, setMsgTypes] = useState<
+    readonly [MsgTypeUrl, EncodeObject["value"] | undefined][]
+  >([]);
   // const [msgTypes, setMsgTypes] = useState<readonly MsgTypeUrl[]>([]);
 
   const [msgKeys, setMsgKeys] = useState<readonly string[]>([]);
@@ -55,7 +61,10 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
   const addMsgType = (newMsgType: MsgTypeUrl, msg?: EncodeObject["value"]) => {
     setMsgKeys((oldMsgKeys) => [...oldMsgKeys, crypto.randomUUID()]);
     setMsgTypes((oldMsgTypes) => {
-      const newMsgTypes: [MsgTypeUrl, EncodeObject["value"] | undefined][] = [...oldMsgTypes, [newMsgType, msg]];
+      const newMsgTypes: [MsgTypeUrl, EncodeObject["value"] | undefined][] = [
+        ...oldMsgTypes,
+        [newMsgType, msg],
+      ];
       setGasLimit(gasOfTx(newMsgTypes.map(([msgType]) => msgType)));
       return newMsgTypes;
     });
@@ -84,24 +93,28 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
         const parsedContent = JSON.parse(content) as unknown;
 
         // Perform necessary validation or state updates
-        if(!Array.isArray(parsedContent)) { 
+        if (!Array.isArray(parsedContent)) {
           setFileError("Invalid file format. Please upload a valid messages");
           return;
         }
         for (const msg of parsedContent) {
-          
-          if (!msg.typeUrl || !msg.value || typeof msg.typeUrl !== "string" || typeof msg.value !== "object") {
+          if (
+            !msg.typeUrl ||
+            !msg.value ||
+            typeof msg.typeUrl !== "string" ||
+            typeof msg.value !== "object"
+          ) {
             setFileError("Invalid file format. Please upload a valid messages");
             return;
           }
-          if(!SupportFileFeatureMsgTypes.includes(msg.typeUrl)) {
+          if (!SupportFileFeatureMsgTypes.includes(msg.typeUrl)) {
             toastError({
               description: `Unsupported message type: ${msg.typeUrl}. Skipping this message`,
             });
             continue;
           }
-          
-          if(validatorMsgsType.includes(msg.typeUrl)) {
+
+          if (validatorMsgsType.includes(msg.typeUrl)) {
             addMsgWithValidator(msg.typeUrl, msg.value);
             continue;
           }
@@ -198,9 +211,10 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
                 ...oldMsgKeys.slice(index + 1),
               ]);
               setMsgTypes((oldMsgTypes) => {
-                const newMsgTypes: [MsgTypeUrl, EncodeObject["value"] | undefined][] = oldMsgTypes.slice();
+                const newMsgTypes: [MsgTypeUrl, EncodeObject["value"] | undefined][] =
+                  oldMsgTypes.slice();
                 newMsgTypes.splice(index, 1);
-                setGasLimit(gasOfTx(newMsgTypes.map(([m]) => m )));
+                setGasLimit(gasOfTx(newMsgTypes.map(([m]) => m)));
                 return newMsgTypes;
               });
             }}
@@ -248,9 +262,11 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
           <label>Bank</label>
           <ul>
             <li>
-              <Button label="Send" 
-              onClick={() => addMsgType(MsgTypeUrls.Send)} 
-              featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Send)} />
+              <Button
+                label="Send"
+                onClick={() => addMsgType(MsgTypeUrls.Send)}
+                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Send)}
+              />
             </li>
           </ul>
         </div>
@@ -258,9 +274,11 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
           <label>IBC</label>
           <ul>
             <li>
-              <Button label="Transfer" 
-              onClick={() => addMsgType(MsgTypeUrls.Transfer)}
-              featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Transfer)} />
+              <Button
+                label="Transfer"
+                onClick={() => addMsgType(MsgTypeUrls.Transfer)}
+                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Transfer)}
+              />
             </li>
           </ul>
         </div>
@@ -287,9 +305,10 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
           <label>Governance</label>
           <ul>
             <li>
-              <Button label="Vote" 
-              onClick={() => addMsgType(MsgTypeUrls.Vote)} 
-              featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Vote)}
+              <Button
+                label="Vote"
+                onClick={() => addMsgType(MsgTypeUrls.Vote)}
+                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Vote)}
               />
             </li>
           </ul>
@@ -298,9 +317,10 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
           <label>Staking</label>
           <ul>
             <li>
-              <Button label="Delegate" 
-              onClick={() => addMsgWithValidator(MsgTypeUrls.Delegate)} 
-              featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Delegate)}
+              <Button
+                label="Delegate"
+                onClick={() => addMsgWithValidator(MsgTypeUrls.Delegate)}
+                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Delegate)}
               />
             </li>
             <li>
@@ -324,7 +344,6 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
                 label="WithdrawDelegatorReward"
                 onClick={() => addMsgWithValidator(MsgTypeUrls.WithdrawDelegatorReward)}
                 featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.WithdrawDelegatorReward)}
-
               />
             </li>
             <li>
@@ -347,16 +366,17 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
               />
             </li>
             <li>
-              <Button label="Unbond" 
-              onClick={() => addMsgWithValidator(MsgTypeUrls.DualUnbond)}
-              featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.DualUnbond)}
-               />
-
+              <Button
+                label="Unbond"
+                onClick={() => addMsgWithValidator(MsgTypeUrls.DualUnbond)}
+                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.DualUnbond)}
+              />
             </li>
             <li>
-              <Button label="Redelegate" 
-              onClick={() => addMsgType(MsgTypeUrls.DualRedelegate)} 
-              featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.DualRedelegate)}
+              <Button
+                label="Redelegate"
+                onClick={() => addMsgType(MsgTypeUrls.DualRedelegate)}
+                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.DualRedelegate)}
               />
             </li>
             <li>
@@ -364,7 +384,6 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
                 label="ClaimRewards"
                 featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.DualRedelegate)}
                 onClick={() => addMsgType(MsgTypeUrls.DualClaimRewards)}
-                
               />
             </li>
           </ul>
@@ -387,28 +406,30 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
               />
             </li>
             <li>
-              <Button label="ExecuteContract" 
-              onClick={() => addMsgType(MsgTypeUrls.Execute)} 
-              featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Execute)}
+              <Button
+                label="ExecuteContract"
+                onClick={() => addMsgType(MsgTypeUrls.Execute)}
+                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Execute)}
               />
             </li>
             <li>
-              <Button label="MigrateContract" 
-              onClick={() => addMsgType(MsgTypeUrls.Migrate)} 
-              featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Migrate)}
+              <Button
+                label="MigrateContract"
+                onClick={() => addMsgType(MsgTypeUrls.Migrate)}
+                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Migrate)}
               />
             </li>
           </ul>
         </div>
       </div>
       <StackableContainer lessMargin lessPadding>
-      <Input
+        <Input
           type="file"
           label="Upload messages from file"
           name="trx-file"
           onChange={handleFileMessages}
-       />
-       {fileError && <p className="multisig-error">{fileError}</p>}
+        />
+        {fileError && <p className="multisig-error">{fileError}</p>}
       </StackableContainer>
       <Button
         label="Create Transaction"

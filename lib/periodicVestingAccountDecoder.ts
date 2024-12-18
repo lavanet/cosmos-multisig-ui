@@ -2,9 +2,7 @@ import { MsgTypeUrls } from "@/types/txMsg";
 import { MsgCreatePeriodicVestingAccount } from "cosmjs-types/cosmos/vesting/v1beta1/tx";
 import { Coin } from "cosmjs-types/cosmos/base/v1beta1/coin";
 import { GeneratedType } from "@cosmjs/proto-signing";
-import {
-    AminoConverters,
-} from "@cosmjs/stargate";
+import { AminoConverters } from "@cosmjs/stargate";
 
 interface AminoMsgCreatePeriodicVestingAccount {
   readonly type: "cosmos-sdk/MsgCreatePeriodVestAccount";
@@ -26,8 +24,8 @@ export function createPeriodicVestingAccount(): AminoConverters {
         fromAddress,
         toAddress,
         startTime,
-        vestingPeriods
-      }: MsgCreatePeriodicVestingAccount): AminoMsgCreatePeriodicVestingAccount['value'] => ({
+        vestingPeriods,
+      }: MsgCreatePeriodicVestingAccount): AminoMsgCreatePeriodicVestingAccount["value"] => ({
         from_address: fromAddress,
         to_address: toAddress,
         start_time: startTime.toString(),
@@ -36,7 +34,9 @@ export function createPeriodicVestingAccount(): AminoConverters {
           amount,
         })),
       }),
-      fromAmino: (data: AminoMsgCreatePeriodicVestingAccount['value']): MsgCreatePeriodicVestingAccount => ({
+      fromAmino: (
+        data: AminoMsgCreatePeriodicVestingAccount["value"],
+      ): MsgCreatePeriodicVestingAccount => ({
         fromAddress: data.from_address,
         toAddress: data.to_address,
         startTime: BigInt(data.start_time),
@@ -44,11 +44,11 @@ export function createPeriodicVestingAccount(): AminoConverters {
           length: BigInt(length),
           amount,
         })),
-      }), 
+      }),
     },
   };
 }
 
 export const periodicVestingTypes: ReadonlyArray<[string, GeneratedType]> = [
-  [MsgTypeUrls.CreatePeriodicVestingAccount, MsgCreatePeriodicVestingAccount]
+  [MsgTypeUrls.CreatePeriodicVestingAccount, MsgCreatePeriodicVestingAccount],
 ];

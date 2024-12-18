@@ -17,15 +17,27 @@ interface MsgDelegateFormProps {
   readonly msg: EncodeObject["value"];
 }
 
-const MsgDelegateForm = ({ delegatorAddress, setMsgGetter, deleteMsg, msg }: MsgDelegateFormProps) => {
+const MsgDelegateForm = ({
+  delegatorAddress,
+  setMsgGetter,
+  deleteMsg,
+  msg: msgProps,
+}: MsgDelegateFormProps) => {
   const { chain } = useChains();
 
-  const [validatorAddress, setValidatorAddress] = useState(msg?.validatorAddress ?? "");
-  const amountFromMsg = msg?.amount?.amount;
-  const [amount, setAmount] = useState(amountFromMsg ? baseCoinToDisplayCoin({ 
-    amount: amountFromMsg, 
-    denom: msg?.amount?.denom
-  }, chain.assets).amount : "0");
+  const [validatorAddress, setValidatorAddress] = useState(msgProps?.validatorAddress ?? "");
+  const amountFromMsg = msgProps?.amount?.amount;
+  const [amount, setAmount] = useState(
+    amountFromMsg
+      ? baseCoinToDisplayCoin(
+          {
+            amount: amountFromMsg,
+            denom: msgProps?.amount?.denom,
+          },
+          chain.assets,
+        ).amount
+      : "0",
+  );
 
   const [validatorAddressError, setValidatorAddressError] = useState("");
   const [amountError, setAmountError] = useState("");

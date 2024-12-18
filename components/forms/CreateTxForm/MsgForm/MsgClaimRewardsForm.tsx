@@ -20,12 +20,11 @@ const MsgClaimRewardsForm = ({
   delegatorAddress,
   setMsgGetter,
   deleteMsg,
-  msg, 
+  msg: msgProps,
 }: MsgClaimRewardsFormProps) => {
   const { chain } = useChains();
-  const msgValue = msg;
 
-  const [validatorAddress, setValidatorAddress] = useState(msgValue?.validatorAddress ?? "");
+  const [validatorAddress, setValidatorAddress] = useState(msgProps?.validatorAddress ?? "");
   const [validatorAddressError, setValidatorAddressError] = useState("");
 
   const trimmedInputs = trimStringsObj({ validatorAddress });

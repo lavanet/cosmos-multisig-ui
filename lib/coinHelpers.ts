@@ -6,7 +6,11 @@ import { RegistryAsset, RegistryAssetDenomUnit } from "../types/chainRegistry";
 export const findAssetAndUnits = (
   denom: string,
   assets: readonly RegistryAsset[],
-): { asset: RegistryAsset; baseUnit: RegistryAssetDenomUnit; targetUnit: RegistryAssetDenomUnit } => {
+): {
+  asset: RegistryAsset;
+  baseUnit: RegistryAssetDenomUnit;
+  targetUnit: RegistryAssetDenomUnit;
+} => {
   const lowerCaseDenom = denom.toLowerCase();
 
   const asset = assets.find(
@@ -19,7 +23,6 @@ export const findAssetAndUnits = (
         (unit) => unit.denom === lowerCaseDenom || unit.aliases?.includes(lowerCaseDenom),
       ),
   );
- 
 
   assert(asset, `An asset with the given denomination ${denom} was not found`);
 
@@ -29,14 +32,14 @@ export const findAssetAndUnits = (
   const targetUnit = asset.denom_units.find(
     (currentUnit) => currentUnit.denom.toLowerCase() === lowerCaseDenom,
   );
-  assert(
-    targetUnit,
-    `A target unit with the given denomination ${lowerCaseDenom} was not found`,
-  );
+  assert(targetUnit, `A target unit with the given denomination ${lowerCaseDenom} was not found`);
   return { asset, baseUnit, targetUnit };
 };
 // todo: fix repeated code
-export const displayCoinToBaseCoin = (displayCoin: Coin, assets: readonly RegistryAsset[]): Coin => {
+export const displayCoinToBaseCoin = (
+  displayCoin: Coin,
+  assets: readonly RegistryAsset[],
+): Coin => {
   const lowerCaseDenom = displayCoin.denom.toLowerCase();
 
   const asset = assets.find(
@@ -79,10 +82,7 @@ export const baseCoinToDisplayCoin = (baseCoin: Coin, assets: readonly RegistryA
   const { targetUnit } = findAssetAndUnits(asset.display, assets);
 
   const denom = targetUnit.denom;
-  const amount = Decimal.fromAtomics(
-    baseCoin.amount.trim() || "0",
-    targetUnit.exponent,
-  ).toString();
+  const amount = Decimal.fromAtomics(baseCoin.amount.trim() || "0", targetUnit.exponent).toString();
 
   return { denom, amount };
 };
