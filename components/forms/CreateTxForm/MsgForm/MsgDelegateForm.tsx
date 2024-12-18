@@ -3,23 +3,29 @@ import { MsgDelegateEncodeObject } from "@cosmjs/stargate";
 import { useEffect, useState } from "react";
 import { MsgGetter } from "..";
 import { useChains } from "../../../../context/ChainsContext";
-import { displayCoinToBaseCoin } from "../../../../lib/coinHelpers";
+import { displayCoinToBaseCoin, baseCoinToDisplayCoin } from "../../../../lib/coinHelpers";
 import { checkAddress, exampleAddress, trimStringsObj } from "../../../../lib/displayHelpers";
 import { MsgCodecs, MsgTypeUrls } from "../../../../types/txMsg";
 import Input from "../../../inputs/Input";
 import StackableContainer from "../../../layout/StackableContainer";
+import { EncodeObject } from "@cosmjs/proto-signing";
 
 interface MsgDelegateFormProps {
   readonly delegatorAddress: string;
   readonly setMsgGetter: (msgGetter: MsgGetter) => void;
   readonly deleteMsg: () => void;
+  readonly msg: EncodeObject["value"];
 }
 
-const MsgDelegateForm = ({ delegatorAddress, setMsgGetter, deleteMsg }: MsgDelegateFormProps) => {
+const MsgDelegateForm = ({ delegatorAddress, setMsgGetter, deleteMsg, msg }: MsgDelegateFormProps) => {
   const { chain } = useChains();
 
-  const [validatorAddress, setValidatorAddress] = useState("");
-  const [amount, setAmount] = useState("0");
+  const [validatorAddress, setValidatorAddress] = useState(msg?.validatorAddress ?? "");
+  const amountFromMsg = msg?.amount?.amount;
+  const [amount, setAmount] = useState(amountFromMsg ? baseCoinToDisplayCoin({ 
+    amount: amountFromMsg, 
+    denom: msg?.amount?.denom
+  }, chain.assets).amount : "0");
 
   const [validatorAddressError, setValidatorAddressError] = useState("");
   const [amountError, setAmountError] = useState("");

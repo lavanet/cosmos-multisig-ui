@@ -1,4 +1,4 @@
-import SelectProvider from "@/components/SelectProvider";
+import SelectProvider from "@/components/SelectProviderNext";
 import { MsgDualClaimRewardsEncodeObject } from "@/types/lava";
 import { useEffect, useState } from "react";
 import { MsgGetter } from "..";
@@ -7,22 +7,25 @@ import { checkAddress, exampleAddress, trimStringsObj } from "../../../../lib/di
 import { MsgCodecs, MsgTypeUrls } from "../../../../types/txMsg";
 import Input from "../../../inputs/Input";
 import StackableContainer from "../../../layout/StackableContainer";
+import { EncodeObject } from "@cosmjs/proto-signing";
 
 interface MsgDualClaimRewardsFormProps {
   readonly delegatorAddress: string;
   readonly setMsgGetter: (msgGetter: MsgGetter) => void;
   readonly deleteMsg: () => void;
+  readonly msg: EncodeObject["value"];
 }
 
 const MsgDualClaimRewardsForm = ({
   delegatorAddress,
   setMsgGetter,
   deleteMsg,
+  msg
 }: MsgDualClaimRewardsFormProps) => {
   const { chain } = useChains();
 
-  const [chainID, setChainID] = useState("");
-  const [providerAddress, setProviderAddress] = useState("");
+  const [chainID, setChainID] = useState(msg?.chainID ?? "");
+  const [providerAddress, setProviderAddress] = useState(msg?.provider ?? "");
   const [providerAddressError, setProviderAddressError] = useState("");
 
   const trimmedInputs = trimStringsObj({ providerAddress });
@@ -63,19 +66,8 @@ const MsgDualClaimRewardsForm = ({
       </button>
       <h2>Dualstaking MsgClaimRewards</h2>
       <div className="form-item">
-        <Input
-          label="Chain ID"
-          name="chain-id"
-          value={chainID}
-          onChange={({ target }) => {
-            setChainID(target.value);
-          }}
-        />
-      </div>
-      <div className="form-item">
         <SelectProvider
-          key={chainID}
-          chainID={chainID}
+          key={providerAddress}
           providerAddress={providerAddress}
           setProviderAddress={setProviderAddress}
         />

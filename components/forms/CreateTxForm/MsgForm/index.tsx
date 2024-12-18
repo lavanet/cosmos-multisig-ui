@@ -31,38 +31,38 @@ const MsgForm = ({ msgType, senderAddress, ...restProps }: MsgFormProps) => {
   switch (msgType) {
     case MsgTypeUrls.Send:
       return <MsgSendForm fromAddress={senderAddress} {...restProps} />;
-    // case MsgTypeUrls.Delegate:
-    //   return <MsgDelegateForm delegatorAddress={senderAddress} {...restProps} />;
-    // case MsgTypeUrls.Undelegate:
-    //   return <MsgUndelegateForm delegatorAddress={senderAddress} {...restProps} />;
-    // case MsgTypeUrls.BeginRedelegate:
-    //   return <MsgRedelegateForm delegatorAddress={senderAddress} {...restProps} />;
+    case MsgTypeUrls.Delegate:
+      return <MsgDelegateForm delegatorAddress={senderAddress} {...restProps} />;
+    case MsgTypeUrls.Undelegate:
+      return <MsgUndelegateForm delegatorAddress={senderAddress} {...restProps} />;
+    case MsgTypeUrls.BeginRedelegate:
+      return <MsgRedelegateForm delegatorAddress={senderAddress} {...restProps} />;
     case MsgTypeUrls.WithdrawDelegatorReward:
       return <MsgClaimRewardsForm delegatorAddress={senderAddress} {...restProps} />;
-    // case MsgTypeUrls.SetWithdrawAddress:
-    //   return <MsgSetWithdrawAddressForm delegatorAddress={senderAddress} {...restProps} />;
+    case MsgTypeUrls.SetWithdrawAddress:
+      return <MsgSetWithdrawAddressForm delegatorAddress={senderAddress} {...restProps} />;
     case MsgTypeUrls.CreateVestingAccount:
       return <MsgCreateVestingAccountForm fromAddress={senderAddress} {...restProps} />;
-    // case MsgTypeUrls.Vote:
-    //   return <MsgVoteForm fromAddress={senderAddress} {...restProps} />;
+    case MsgTypeUrls.Vote:
+      return <MsgVoteForm fromAddress={senderAddress} {...restProps} />;
     case MsgTypeUrls.Transfer:
       return <MsgTransferForm fromAddress={senderAddress} {...restProps} />;
-    // case MsgTypeUrls.Execute:
-    //   return <MsgExecuteContractForm fromAddress={senderAddress} {...restProps} />;
-    // case MsgTypeUrls.Instantiate:
-    //   return <MsgInstantiateContractForm fromAddress={senderAddress} {...restProps} />;
-    // case MsgTypeUrls.Instantiate2:
-    //   return <MsgInstantiateContract2Form fromAddress={senderAddress} {...restProps} />;
-    // case MsgTypeUrls.Migrate:
-    //   return <MsgMigrateContractForm fromAddress={senderAddress} {...restProps} />;
-    // case MsgTypeUrls.DualDelegate:
-    //   return <MsgDualDelegateForm delegatorAddress={senderAddress} {...restProps} />;
-    // case MsgTypeUrls.DualRedelegate:
-    //   return <MsgDualRedelegateForm delegatorAddress={senderAddress} {...restProps} />;
-    // case MsgTypeUrls.DualUnbond:
-    //   return <MsgDualUnbondForm delegatorAddress={senderAddress} {...restProps} />;
-    // case MsgTypeUrls.DualClaimRewards:
-    //   return <MsgDualClaimRewardsForm delegatorAddress={senderAddress} {...restProps} />;
+    case MsgTypeUrls.Execute:
+      return <MsgExecuteContractForm fromAddress={senderAddress} {...restProps} />;
+    case MsgTypeUrls.Instantiate:
+      return <MsgInstantiateContractForm fromAddress={senderAddress} {...restProps} />;
+    case MsgTypeUrls.Instantiate2:
+      return <MsgInstantiateContract2Form fromAddress={senderAddress} {...restProps} />;
+    case MsgTypeUrls.Migrate:
+      return <MsgMigrateContractForm fromAddress={senderAddress} {...restProps} />;
+    case MsgTypeUrls.DualDelegate:
+      return <MsgDualDelegateForm delegatorAddress={senderAddress} {...restProps} />;
+    case MsgTypeUrls.DualRedelegate:
+      return <MsgDualRedelegateForm delegatorAddress={senderAddress} {...restProps} />;
+    case MsgTypeUrls.DualUnbond:
+      return <MsgDualUnbondForm delegatorAddress={senderAddress} {...restProps} />;
+    case MsgTypeUrls.DualClaimRewards:
+      return <MsgDualClaimRewardsForm delegatorAddress={senderAddress} {...restProps} />;
     case MsgTypeUrls.CreatePeriodicVestingAccount:
       return <MsgCreatePeriodicVestingAccount fromAddress={senderAddress} {...restProps} />;
     default:

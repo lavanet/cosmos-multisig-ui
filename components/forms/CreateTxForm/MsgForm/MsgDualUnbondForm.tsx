@@ -4,29 +4,36 @@ import { MsgDualUnbondEncodeObject } from "@/types/lava";
 import { useEffect, useState } from "react";
 import { MsgGetter } from "..";
 import { useChains } from "../../../../context/ChainsContext";
-import { displayCoinToBaseCoin } from "../../../../lib/coinHelpers";
+import { displayCoinToBaseCoin, baseCoinToDisplayCoin } from "../../../../lib/coinHelpers";
 import { checkAddress, exampleAddress, trimStringsObj } from "../../../../lib/displayHelpers";
 import { MsgCodecs, MsgTypeUrls } from "../../../../types/txMsg";
 import Input from "../../../inputs/Input";
 import StackableContainer from "../../../layout/StackableContainer";
+import { EncodeObject } from "@cosmjs/proto-signing";
 
 interface MsgDualUnbondFormProps {
   readonly delegatorAddress: string;
   readonly setMsgGetter: (msgGetter: MsgGetter) => void;
   readonly deleteMsg: () => void;
+  readonly msg: EncodeObject["value"];
 }
 
 const MsgDualUnbondForm = ({
   delegatorAddress,
   setMsgGetter,
   deleteMsg,
+  msg
 }: MsgDualUnbondFormProps) => {
   const { chain } = useChains();
 
-  const [validatorAddress, setValidatorAddress] = useState("");
-  const [providerAddress, setProviderAddress] = useState("");
-  const [chainID, setChainID] = useState("");
-  const [amount, setAmount] = useState("0");
+  const [validatorAddress, setValidatorAddress] = useState(msg.validator ?? "");
+  const [providerAddress, setProviderAddress] = useState(msg.provider ?? "");
+  const [chainID, setChainID] = useState(msg.chainID ?? "");
+  const amountFromMsg = msg?.amount?.amount;
+  const [amount, setAmount] = useState(amountFromMsg ? baseCoinToDisplayCoin({ 
+    amount: amountFromMsg, 
+    denom: msg?.amount?.denom
+  }, chain.assets).amount : "0");
 
   const [validatorAddressError, setValidatorAddressError] = useState("");
   const [providerAddressError, setProviderAddressError] = useState("");

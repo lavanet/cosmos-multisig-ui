@@ -22,7 +22,7 @@ interface SelectProviderProps {
   readonly providerAddress: string;
   readonly setProviderAddress: (providerAddress: string) => void;
 }
-
+// todo: move  all SelectProvider to SelectProviderNext
 export default function SelectProvider({
   chainID,
   providerAddress,
