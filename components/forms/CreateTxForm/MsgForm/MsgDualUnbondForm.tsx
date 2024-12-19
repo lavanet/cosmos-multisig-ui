@@ -15,7 +15,7 @@ interface MsgDualUnbondFormProps {
   readonly delegatorAddress: string;
   readonly setMsgGetter: (msgGetter: MsgGetter) => void;
   readonly deleteMsg: () => void;
-  readonly msg: EncodeObject["value"];
+  readonly msg: EncodeObject["value"] | undefined;
 }
 
 const MsgDualUnbondForm = ({
@@ -26,9 +26,9 @@ const MsgDualUnbondForm = ({
 }: MsgDualUnbondFormProps) => {
   const { chain } = useChains();
 
-  const [validatorAddress, setValidatorAddress] = useState(msgProps.validator ?? "");
-  const [providerAddress, setProviderAddress] = useState(msgProps.provider ?? "");
-  const [chainID, setChainID] = useState(msgProps.chainID ?? "");
+  const [validatorAddress, setValidatorAddress] = useState(msgProps?.validator ?? "");
+  const [providerAddress, setProviderAddress] = useState(msgProps?.provider ?? "");
+  const [chainID, setChainID] = useState(msgProps?.chainID ?? "");
   const amountFromMsg = msgProps?.amount?.amount;
   const [amount, setAmount] = useState(
     amountFromMsg
