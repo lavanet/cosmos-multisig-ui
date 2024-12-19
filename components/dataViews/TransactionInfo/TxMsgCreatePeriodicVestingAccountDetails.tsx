@@ -17,7 +17,7 @@ const TxMsgCreatePeriodicVestingAccountDetails = ({
   const formatDate = (timestamp: bigint) => {
     const dateObj = new Date(Number(timestamp) * 1000);
     return {
-      date: dateObj.toLocaleDateString("en-US"), 
+      date: dateObj.toLocaleDateString("en-US"),
       time: dateObj.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
     };
   };

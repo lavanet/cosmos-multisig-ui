@@ -7,21 +7,24 @@ import { checkAddress, exampleAddress, trimStringsObj } from "../../../../lib/di
 import { MsgCodecs, MsgTypeUrls } from "../../../../types/txMsg";
 import Input from "../../../inputs/Input";
 import StackableContainer from "../../../layout/StackableContainer";
+import { EncodeObject } from "@cosmjs/proto-signing";
 
 interface MsgClaimRewardsFormProps {
   readonly delegatorAddress: string;
   readonly setMsgGetter: (msgGetter: MsgGetter) => void;
   readonly deleteMsg: () => void;
+  readonly msg: EncodeObject["value"];
 }
 
 const MsgClaimRewardsForm = ({
   delegatorAddress,
   setMsgGetter,
   deleteMsg,
+  msg: msgProps,
 }: MsgClaimRewardsFormProps) => {
   const { chain } = useChains();
 
-  const [validatorAddress, setValidatorAddress] = useState("");
+  const [validatorAddress, setValidatorAddress] = useState(msgProps?.validatorAddress ?? "");
   const [validatorAddressError, setValidatorAddressError] = useState("");
 
   const trimmedInputs = trimStringsObj({ validatorAddress });

@@ -1,3 +1,4 @@
+import { saveAs } from "file-saver";
 import { toastError, toastSuccess } from "@/lib/utils";
 import { LoadingStates, SigningStatus } from "@/types/signing";
 import { MultisigThresholdPubkey, makeCosmoshubPath } from "@cosmjs/amino";
@@ -23,7 +24,11 @@ import { DbSignature, DbTransaction, WalletAccount } from "../../types";
 import HashView from "../dataViews/HashView";
 import Button from "../inputs/Button";
 import StackableContainer from "../layout/StackableContainer";
-import { createPeriodicVestingAccount, periodicVestingTypes } from "@/lib/periodicVestingAccountDecoder";
+import {
+  createPeriodicVestingAccount,
+  periodicVestingTypes,
+} from "@/lib/periodicVestingAccountDecoder";
+import { exportMsgToJson } from "@/lib/txMsgHelpers";
 
 interface TransactionSigningProps {
   readonly signatures: DbSignature[];
@@ -158,13 +163,13 @@ const TransactionSigning = (props: TransactionSigningProps) => {
           ...defaultRegistryTypes,
           ...wasmTypes,
           ...lavajs.lavanetProtoRegistry,
-          ...periodicVestingTypes
+          ...periodicVestingTypes,
         ]),
         aminoTypes: new AminoTypes({
           ...createDefaultAminoConverters(),
           ...createWasmAminoConverters(),
           ...lavajs.lavanetAminoConverters,
-          ...createPeriodicVestingAccount()
+          ...createPeriodicVestingAccount(),
         }),
       });
 
@@ -212,6 +217,11 @@ const TransactionSigning = (props: TransactionSigningProps) => {
       setLoading((newLoading) => ({ ...newLoading, signing: false }));
       toast.dismiss(loadingToastId);
     }
+  };
+  const downloadTransactionMessages = () => {
+    const msgJSON = props.tx.msgs.map(exportMsgToJson);
+    const blob = new Blob([JSON.stringify(msgJSON, null, 2)], { type: "application/json" });
+    saveAs(blob, "transaction_messages.json");
   };
 
   return (
@@ -266,6 +276,9 @@ const TransactionSigning = (props: TransactionSigningProps) => {
             )}
           </>
         ) : null}
+      </StackableContainer>
+      <StackableContainer lessPadding lessMargin lessRadius>
+        <Button label="Download transaction messages JSON" onClick={downloadTransactionMessages} />
       </StackableContainer>
       <style jsx>{`
         p {

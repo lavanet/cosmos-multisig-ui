@@ -59,7 +59,7 @@ const TxMsgDetails = ({ typeUrl, value: msgValue }: EncodeObject) => {
       return <TxMsgDualUnbondDetails msgValue={msgValue} />;
     case MsgTypeUrls.DualClaimRewards:
       return <TxMsgDualClaimRewardsDetails msgValue={msgValue} />;
-    case MsgTypeUrls.CreatePeriodicVestingAccount: 
+    case MsgTypeUrls.CreatePeriodicVestingAccount:
       return <TxMsgCreatePeriodicVestingAccountDetails msgValue={msgValue} />;
     default:
       return null;

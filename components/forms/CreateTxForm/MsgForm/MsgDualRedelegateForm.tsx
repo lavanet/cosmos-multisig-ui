@@ -3,30 +3,44 @@ import { MsgDualRedelegateEncodeObject } from "@/types/lava";
 import { useEffect, useState } from "react";
 import { MsgGetter } from "..";
 import { useChains } from "../../../../context/ChainsContext";
-import { displayCoinToBaseCoin } from "../../../../lib/coinHelpers";
+import { displayCoinToBaseCoin, baseCoinToDisplayCoin } from "../../../../lib/coinHelpers";
 import { checkAddress, exampleAddress, trimStringsObj } from "../../../../lib/displayHelpers";
 import { MsgCodecs, MsgTypeUrls } from "../../../../types/txMsg";
 import Input from "../../../inputs/Input";
 import StackableContainer from "../../../layout/StackableContainer";
+import { EncodeObject } from "@cosmjs/proto-signing";
 
 interface MsgDualRedelegateFormProps {
   readonly delegatorAddress: string;
   readonly setMsgGetter: (msgGetter: MsgGetter) => void;
   readonly deleteMsg: () => void;
+  readonly msg: EncodeObject["value"];
 }
 
 const MsgDualRedelegateForm = ({
   delegatorAddress,
   setMsgGetter,
   deleteMsg,
+  msg: msgProps,
 }: MsgDualRedelegateFormProps) => {
   const { chain } = useChains();
 
-  const [fromProviderAddress, setFromProviderAddress] = useState("");
-  const [toProviderAddress, setToProviderAddress] = useState("");
-  const [fromChainID, setFromChainID] = useState("");
-  const [toChainID, setToChainID] = useState("");
-  const [amount, setAmount] = useState("0");
+  const [fromProviderAddress, setFromProviderAddress] = useState(msgProps?.fromProvider ?? "");
+  const [toProviderAddress, setToProviderAddress] = useState(msgProps?.toProvider ?? "");
+  const [fromChainID, setFromChainID] = useState(msgProps?.fromChainID ?? "");
+  const [toChainID, setToChainID] = useState(msgProps?.toChainID ?? "");
+  const amountFromMsg = msgProps?.amount?.amount;
+  const [amount, setAmount] = useState(
+    amountFromMsg
+      ? baseCoinToDisplayCoin(
+          {
+            amount: amountFromMsg,
+            denom: msgProps?.amount?.denom,
+          },
+          chain.assets,
+        ).amount
+      : "0",
+  );
 
   const [fromProviderAddressError, setFromProviderAddressError] = useState("");
   const [toProviderAddressError, setToProviderAddressError] = useState("");

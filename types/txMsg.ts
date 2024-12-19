@@ -9,7 +9,10 @@ import {
   MsgDelegate,
   MsgUndelegate,
 } from "cosmjs-types/cosmos/staking/v1beta1/tx";
-import { MsgCreateVestingAccount, MsgCreatePeriodicVestingAccount } from "cosmjs-types/cosmos/vesting/v1beta1/tx";
+import {
+  MsgCreateVestingAccount,
+  MsgCreatePeriodicVestingAccount,
+} from "cosmjs-types/cosmos/vesting/v1beta1/tx";
 import {
   MsgExecuteContract,
   MsgInstantiateContract,
@@ -62,3 +65,26 @@ export const MsgCodecs = {
   [MsgTypeUrls.DualUnbond]: MsgDualUnbond,
   [MsgTypeUrls.DualClaimRewards]: MsgDualClaimRewards,
 };
+export const SupportFileFeatureMsgTypes = [
+  MsgTypeUrls.Send,
+  MsgTypeUrls.WithdrawDelegatorReward,
+  MsgTypeUrls.CreateVestingAccount,
+  MsgTypeUrls.Transfer,
+  MsgTypeUrls.CreatePeriodicVestingAccount,
+  MsgTypeUrls.BeginRedelegate,
+  MsgTypeUrls.Undelegate,
+  MsgTypeUrls.Delegate,
+  MsgTypeUrls.DualDelegate,
+  MsgTypeUrls.DualRedelegate,
+  MsgTypeUrls.DualClaimRewards,
+  MsgTypeUrls.DualUnbond,
+] as const;
+// MsgTypes to load validator list
+export const validatorMsgsType = [
+  MsgTypeUrls.WithdrawDelegatorReward,
+  MsgTypeUrls.BeginRedelegate,
+  MsgTypeUrls.Undelegate,
+  MsgTypeUrls.Delegate,
+  MsgTypeUrls.DualDelegate,
+  MsgTypeUrls.DualUnbond,
+];

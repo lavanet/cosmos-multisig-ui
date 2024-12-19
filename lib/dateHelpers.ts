@@ -27,22 +27,39 @@ export const timestampFromDatetimeLocal = (
       throw new Error("Unexpected unit value");
   }
 };
+export const datetimeLocalFromTimestamp = (
+  timestampParam: bigint | number,
+  unit: "ns" | "ms" | "s" = "ms",
+): string => {
+  let normalizedTimestamp;
+  const timestamp = BigInt(timestampParam);
 
-// With stripped seconds and milliseconds
-export const datetimeLocalFromTimestamp = (timestamp: number): string => {
-  const minDate = new Date(timestamp);
+  switch (unit) {
+    case "s":
+      normalizedTimestamp = timestamp * 1_000n;
+      break;
+    case "ms":
+      normalizedTimestamp = timestamp;
+      break;
+    case "ns":
+    default:
+      normalizedTimestamp = timestamp / 1_000_000n;
+      break;
+  }
 
-  const minMonth = minDate.getMonth() + 1; // It's 0-indexed
-  const minMonthStr = minMonth < 10 ? `0${minMonth}` : String(minMonth);
+  const date = new Date(Number(normalizedTimestamp)); // Convert BigInt to Number for Date
 
-  const minDay = minDate.getDate();
-  const minDayStr = minDay < 10 ? `0${minDay}` : String(minDay);
+  const month = date.getMonth() + 1; // It's 0-indexed
+  const monthStr = month < 10 ? `0${month}` : String(month);
 
-  const minHours = minDate.getHours();
-  const minHoursStr = minHours < 10 ? `0${minHours}` : String(minHours);
+  const day = date.getDate();
+  const dayStr = day < 10 ? `0${day}` : String(day);
 
-  const minMinutes = minDate.getMinutes();
-  const minMinutesStr = minMinutes < 10 ? `0${minMinutes}` : String(minMinutes);
+  const hours = date.getHours();
+  const hoursStr = hours < 10 ? `0${hours}` : String(hours);
 
-  return `${minDate.getFullYear()}-${minMonthStr}-${minDayStr}T${minHoursStr}:${minMinutesStr}`;
+  const minutes = date.getMinutes();
+  const minutesStr = minutes < 10 ? `0${minutes}` : String(minutes);
+
+  return `${date.getFullYear()}-${monthStr}-${dayStr}T${hoursStr}:${minutesStr}`;
 };

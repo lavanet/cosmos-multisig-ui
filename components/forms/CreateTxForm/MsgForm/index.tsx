@@ -18,11 +18,12 @@ import MsgTransferForm from "./MsgTransferForm";
 import MsgUndelegateForm from "./MsgUndelegateForm";
 import MsgVoteForm from "./MsgVoteForm";
 import MsgCreatePeriodicVestingAccount from "./MsgCreatePeriodicVestingAccount";
-
+import { EncodeObject } from "@cosmjs/proto-signing";
 interface MsgFormProps {
   readonly msgType: MsgTypeUrl;
   readonly senderAddress: string;
   readonly setMsgGetter: (msgGetter: MsgGetter) => void;
+  readonly msg: EncodeObject["value"];
   readonly deleteMsg: () => void;
 }
 

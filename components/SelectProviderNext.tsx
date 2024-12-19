@@ -10,50 +10,31 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useChains } from "@/context/ChainsContext";
-import { getProviders } from "@/lib/pairing";
+import { getProvidersNext } from "@/lib/pairing";
 import { cn, toastError } from "@/lib/utils";
-import { sleep } from "@cosmjs/utils";
-import { StakeEntry } from "@lavanet/lavajs/dist/codegen/lavanet/lava/epochstorage/stake_entry";
+import { ProviderMetadata } from "@lavanet/lavajs/dist/codegen/lavanet/lava/epochstorage/provider_metadata";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 
 interface SelectProviderProps {
-  readonly chainID: string;
   readonly providerAddress: string;
   readonly setProviderAddress: (providerAddress: string) => void;
 }
-// todo: move  all SelectProvider to SelectProviderNext
-export default function SelectProvider({
-  chainID,
-  providerAddress,
-  setProviderAddress,
-}: SelectProviderProps) {
+
+function SelectProviderNext({ providerAddress, setProviderAddress }: SelectProviderProps) {
   const { chain } = useChains();
   const [open, setOpen] = useState(false);
-  const [providers, setProviders] = useState<readonly StakeEntry[]>();
+  const [providers, setProviders] = useState<readonly ProviderMetadata[]>();
   const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
-    let isMounted = true;
-
     const updateProviders = async () => {
-      await sleep(2000);
-
-      if (!isMounted) {
-        return;
-      }
-
       try {
-        const newProviders = await getProviders(chain.nodeAddress, chainID);
-
-        if (newProviders.length && isMounted) {
+        const newProviders = await getProvidersNext(chain.nodeAddress);
+        if (newProviders.length) {
           setProviders(newProviders);
         }
       } catch (e) {
-        if (!isMounted) {
-          return;
-        }
-
         setProviders([]);
         console.error("Failed to get providers:", e);
         toastError({
@@ -64,11 +45,7 @@ export default function SelectProvider({
     };
 
     updateProviders();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [chain.nodeAddress, chainID]);
+  }, [chain.nodeAddress]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -80,8 +57,8 @@ export default function SelectProvider({
           className="mb-4 w-full max-w-[300px] justify-between border-white bg-fuchsia-900 hover:bg-fuchsia-900"
         >
           {providerAddress
-            ? providers?.find((providerItem) => providerAddress === providerItem.address)
-                ?.moniker || "Unknown provider"
+            ? providers?.find((providerItem) => providerAddress === providerItem.provider)
+                ?.description?.moniker || "Unknown provider"
             : "Select provider…"}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -98,19 +75,19 @@ export default function SelectProvider({
             {providers?.map((providerItem) => (
               <CommandItem
                 className="aria-selected:bg-fuchsia-800"
-                key={providerItem.address}
+                key={providerItem.provider}
                 onSelect={() => {
-                  setProviderAddress(providerItem.address);
+                  setProviderAddress(providerItem.provider);
                   setOpen(false);
                 }}
               >
                 <Check
                   className={cn(
                     "mr-2 h-4 w-4",
-                    providerAddress === providerItem.address ? "opacity-100" : "opacity-0",
+                    providerAddress === providerItem.provider ? "opacity-100" : "opacity-0",
                   )}
                 />
-                {providerItem.moniker}
+                {providerItem.description?.moniker}
               </CommandItem>
             ))}
           </CommandGroup>
@@ -119,3 +96,4 @@ export default function SelectProvider({
     </Popover>
   );
 }
+export default memo(SelectProviderNext);

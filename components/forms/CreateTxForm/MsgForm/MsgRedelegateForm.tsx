@@ -3,7 +3,7 @@ import { EncodeObject } from "@cosmjs/proto-signing";
 import { useEffect, useState } from "react";
 import { MsgGetter } from "..";
 import { useChains } from "../../../../context/ChainsContext";
-import { displayCoinToBaseCoin } from "../../../../lib/coinHelpers";
+import { displayCoinToBaseCoin, baseCoinToDisplayCoin } from "../../../../lib/coinHelpers";
 import { checkAddress, exampleAddress, trimStringsObj } from "../../../../lib/displayHelpers";
 import { MsgCodecs, MsgTypeUrls } from "../../../../types/txMsg";
 import Input from "../../../inputs/Input";
@@ -13,18 +13,35 @@ interface MsgRedelegateFormProps {
   readonly delegatorAddress: string;
   readonly setMsgGetter: (msgGetter: MsgGetter) => void;
   readonly deleteMsg: () => void;
+  readonly msg: EncodeObject["value"];
 }
 
 const MsgRedelegateForm = ({
   delegatorAddress,
   setMsgGetter,
   deleteMsg,
+  msg: msgProps,
 }: MsgRedelegateFormProps) => {
   const { chain } = useChains();
 
-  const [validatorSrcAddress, setValidatorSrcAddress] = useState("");
-  const [validatorDstAddress, setValidatorDstAddress] = useState("");
-  const [amount, setAmount] = useState("0");
+  const [validatorSrcAddress, setValidatorSrcAddress] = useState(
+    msgProps?.validatorSrcAddress ?? "",
+  );
+  const [validatorDstAddress, setValidatorDstAddress] = useState(
+    msgProps?.validatorDstAddress ?? "",
+  );
+  const amountFromMsg = msgProps?.amount?.amount;
+  const [amount, setAmount] = useState(
+    amountFromMsg
+      ? baseCoinToDisplayCoin(
+          {
+            amount: amountFromMsg,
+            denom: msgProps?.amount?.denom,
+          },
+          chain.assets,
+        ).amount
+      : "0",
+  );
 
   const [validatorSrcAddressError, setValidatorSrcAddressError] = useState("");
   const [validatorDstAddressError, setValidatorDstAddressError] = useState("");

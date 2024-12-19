@@ -3,7 +3,7 @@ import BigNumber from "bignumber.js";
 import { useEffect, useState } from "react";
 import { MsgGetter } from "..";
 import { useChains } from "../../../../context/ChainsContext";
-import { displayCoinToBaseCoin } from "../../../../lib/coinHelpers";
+import { baseCoinToDisplayCoin, displayCoinToBaseCoin } from "../../../../lib/coinHelpers";
 import {
   datetimeLocalFromTimestamp,
   timestampFromDatetimeLocal,
@@ -14,7 +14,6 @@ import Input from "../../../inputs/Input";
 import Select from "../../../inputs/Select";
 import StackableContainer from "../../../layout/StackableContainer";
 import { add as addDate, differenceInSeconds } from "date-fns";
-
 
 const UNIT_VESTING_PERIODS = {
   HOURS: "hours",
@@ -31,6 +30,7 @@ interface PeriodicVestingPeriod {
 interface MsgCreatePeriodicVestingAccountFormProps {
   readonly fromAddress: string;
   readonly setMsgGetter: (msgGetter: MsgGetter) => void;
+  msg: EncodeObject["value"];
   readonly deleteMsg: () => void;
 }
 
@@ -57,20 +57,41 @@ function formatLengthVestingPeriod(length: string, unit: string): string {
       return length;
   }
 }
+interface VestingPeriod {
+  amount: {
+    amount: string;
+    denom: string;
+  }[];
+  length: number;
+}
 const MsgCreatePeriodicVestingAccount = ({
   fromAddress,
   setMsgGetter,
   deleteMsg,
+  msg: msgProps,
 }: MsgCreatePeriodicVestingAccountFormProps) => {
   const { chain } = useChains();
 
-  const [toAddress, setToAddress] = useState("");
+  const [toAddress, setToAddress] = useState(msgProps?.toAddress ?? "");
   const [startTime, setEndTime] = useState(
-    datetimeLocalFromTimestamp(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default is one month from now
+    msgProps?.startTime
+      ? datetimeLocalFromTimestamp(BigInt(msgProps?.startTime), "s")
+      : datetimeLocalFromTimestamp(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default is one month from now
   );
-  const [vestingPeriods, setVestingPeriods] = useState<PeriodicVestingPeriod[]>([
-    { amount: "", length: "", unit: UNIT_VESTING_PERIODS.SECONDS },
-  ]);
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  const defaultVestingPeriods = msgProps?.vestingPeriods
+    ? msgProps?.vestingPeriods?.map((period: VestingPeriod) => ({
+        amount: baseCoinToDisplayCoin(
+          { amount: period.amount[0].amount, denom: period.amount[0].denom },
+          chain.assets,
+        ).amount,
+        length: period.length,
+        unit: UNIT_VESTING_PERIODS.SECONDS,
+      }))
+    : [{ amount: "", length: "", unit: UNIT_VESTING_PERIODS.SECONDS }];
+  const [vestingPeriods, setVestingPeriods] =
+    useState<PeriodicVestingPeriod[]>(defaultVestingPeriods);
   const [showRepeatState, setShowRepeatState] = useState(new Map<number, boolean>());
   const [repeatTimes, setRepeatTimes] = useState(1);
 
@@ -275,7 +296,9 @@ const MsgCreatePeriodicVestingAccount = ({
                     { value: UNIT_VESTING_PERIODS.DAYS, label: UNIT_VESTING_PERIODS.DAYS },
                   ]}
                   value={{ value: period.unit, label: period.unit }}
-                  onChange={(target: { value: string }) => updateVestingPeriod(index, "unit", target.value)}
+                  onChange={(target: { value: string }) =>
+                    updateVestingPeriod(index, "unit", target.value)
+                  }
                 />
               </div>
             </div>
