@@ -121,6 +121,7 @@ function examplePubkey(index: number): string {
  */
 const checkAddress = (input: string, chainAddressPrefix: string | null) => {
   if (!input) return "Empty";
+  if(input === "empty_provider") return null;
 
   let data;
   let prefix;
