@@ -1,4 +1,4 @@
-import SelectProvider from "@/components/SelectProvider";
+import SelectProvider from "@/components/SelectProviderNext";
 import { MsgDualRedelegateEncodeObject } from "@/types/lava";
 import { useEffect, useState } from "react";
 import { MsgGetter } from "..";
@@ -27,8 +27,6 @@ const MsgDualRedelegateForm = ({
 
   const [fromProviderAddress, setFromProviderAddress] = useState(msgProps?.fromProvider ?? "");
   const [toProviderAddress, setToProviderAddress] = useState(msgProps?.toProvider ?? "");
-  const [fromChainID, setFromChainID] = useState(msgProps?.fromChainID ?? "");
-  const [toChainID, setToChainID] = useState(msgProps?.toChainID ?? "");
   const amountFromMsg = msgProps?.amount?.amount;
   const [amount, setAmount] = useState(
     amountFromMsg
@@ -49,14 +47,12 @@ const MsgDualRedelegateForm = ({
   const trimmedInputs = trimStringsObj({
     fromProviderAddress,
     toProviderAddress,
-    fromChainID,
-    toChainID,
     amount,
   });
 
   useEffect(() => {
     // eslint-disable-next-line no-shadow
-    const { fromProviderAddress, toProviderAddress, fromChainID, toChainID, amount } =
+    const { fromProviderAddress, toProviderAddress, amount } =
       trimmedInputs;
 
     const isMsgValid = (): boolean => {
@@ -64,18 +60,18 @@ const MsgDualRedelegateForm = ({
       setToProviderAddressError("");
       setAmountError("");
 
-      if (fromChainID && !fromProviderAddress) {
+      if (!fromProviderAddress) {
         setFromProviderAddressError("From Provider address is required");
         return false;
       }
 
-      if (toChainID && !toProviderAddress) {
+      if (!toProviderAddress) {
         setToProviderAddressError("To Provider address is required");
         return false;
       }
 
       const fromProviderAddressErrorMsg = checkAddress(fromProviderAddress, chain.addressPrefix);
-      if (fromChainID && fromProviderAddressErrorMsg) {
+      if (fromProviderAddressErrorMsg) {
         setFromProviderAddressError(
           `Invalid address for network ${chain.chainId}: ${fromProviderAddressErrorMsg}`,
         );
@@ -83,7 +79,7 @@ const MsgDualRedelegateForm = ({
       }
 
       const toProviderAddressErrorMsg = checkAddress(toProviderAddress, chain.addressPrefix);
-      if (toChainID && toProviderAddressErrorMsg) {
+      if (toProviderAddressErrorMsg) {
         setToProviderAddressError(
           `Invalid address for network ${chain.chainId}: ${toProviderAddressErrorMsg}`,
         );
@@ -115,10 +111,8 @@ const MsgDualRedelegateForm = ({
 
     const msgValue = MsgCodecs[MsgTypeUrls.DualRedelegate].fromPartial({
       creator: delegatorAddress,
-      fromChainID,
-      toChainID,
-      fromProvider: fromChainID ? fromProviderAddress : "empty_provider",
-      toProvider: toChainID ? toProviderAddress : "empty_provider",
+      fromProvider: fromProviderAddress,
+      toProvider: toProviderAddress,
       amount: microCoin,
     });
 
@@ -145,29 +139,9 @@ const MsgDualRedelegateForm = ({
       </button>
       <h2>Dualstaking MsgRedelegate</h2>
       <div className="form-item">
-        <Input
-          label="From Chain ID"
-          name="from-chain-id"
-          value={fromChainID}
-          onChange={({ target }) => {
-            setFromChainID(target.value);
-          }}
-        />
-      </div>
-      <div className="form-item">
-        <Input
-          label="To Chain ID"
-          name="to-chain-id"
-          value={toChainID}
-          onChange={({ target }) => {
-            setToChainID(target.value);
-          }}
-        />
-      </div>
-      <div className="form-item">
         <SelectProvider
-          key={fromChainID}
-          chainID={fromChainID}
+          key={fromProviderAddress}
+          addEmptyProvider
           providerAddress={fromProviderAddress}
           setProviderAddress={setFromProviderAddress}
         />
@@ -185,8 +159,8 @@ const MsgDualRedelegateForm = ({
       </div>
       <div className="form-item">
         <SelectProvider
-          key={toChainID}
-          chainID={toChainID}
+          key={toProviderAddress}
+          addEmptyProvider
           providerAddress={toProviderAddress}
           setProviderAddress={setToProviderAddress}
         />

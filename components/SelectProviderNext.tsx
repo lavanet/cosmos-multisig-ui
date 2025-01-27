@@ -15,23 +15,41 @@ import { cn, toastError } from "@/lib/utils";
 import { ProviderMetadata } from "@lavanet/lavajs/dist/codegen/lavanet/lava/epochstorage/provider_metadata";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useEffect, useState, memo } from "react";
-
+const emptyProvider = {
+  provider: "empty_provider",
+  vault: "empty_provider",
+  totalDelegations: { amount: "0", denom: "" },
+  chains: [],
+  delegateCommission: 0n,
+  lastChange: 0n,
+  description: {
+    moniker: "Empty provider",
+    identity: "",
+    website: "",
+    securityContact: "",
+    details: "",
+  },
+}
 interface SelectProviderProps {
   readonly providerAddress: string;
   readonly setProviderAddress: (providerAddress: string) => void;
+  readonly addEmptyProvider?: boolean;
 }
 
-function SelectProviderNext({ providerAddress, setProviderAddress }: SelectProviderProps) {
+function SelectProviderNext({ providerAddress, setProviderAddress, addEmptyProvider }: SelectProviderProps) {
   const { chain } = useChains();
   const [open, setOpen] = useState(false);
   const [providers, setProviders] = useState<readonly ProviderMetadata[]>();
   const [searchText, setSearchText] = useState("");
+ 
 
   useEffect(() => {
     const updateProviders = async () => {
       try {
         const newProviders = await getProvidersNext(chain.nodeAddress);
-        if (newProviders.length) {
+        if (newProviders.length && addEmptyProvider) {
+          setProviders([emptyProvider, ...newProviders]);
+        } else if (newProviders.length) {
           setProviders(newProviders);
         }
       } catch (e) {
