@@ -28,7 +28,11 @@ import {
   createPeriodicVestingAccount,
   periodicVestingTypes,
 } from "@/lib/periodicVestingAccountDecoder";
+import { createAuthzAminoConverters, msgGrantTypes } from "@/lib/grantDecoder";
+import { createAuthzExecAminoConverters, execGrantTypes } from "@/lib/execGrantDecoder";
 import { exportMsgToJson } from "@/lib/txMsgHelpers";
+import { MsgSend } from "cosmjs-types/cosmos/bank/v1beta1/tx";
+// import { sign } from "crypto";
 
 interface TransactionSigningProps {
   readonly signatures: DbSignature[];
@@ -157,6 +161,27 @@ const TransactionSigning = (props: TransactionSigningProps) => {
 
       const signerAddress = walletAccount?.bech32Address;
       assert(signerAddress, "Missing signer address");
+      console.log('asdasd', msgGrantTypes);
+      const aminoTypesForAuthzExec = new AminoTypes({
+        ...createDefaultAminoConverters(),
+        ...createWasmAminoConverters(),
+        ...lavajs.lavanetAminoConverters,
+        ...createPeriodicVestingAccount(),
+      });
+      const execAminoTypes = createAuthzExecAminoConverters(aminoTypesForAuthzExec);
+      const aminoTypes = new AminoTypes({
+        ...createDefaultAminoConverters(),
+        ...createWasmAminoConverters(),
+        ...lavajs.lavanetAminoConverters,
+        ...createPeriodicVestingAccount(),
+        ...createAuthzAminoConverters(),
+        ...createAuthzAminoConverters(),
+        ...execAminoTypes,
+      });
+
+
+
+
 
       const signingClient = await SigningStargateClient.offline(offlineSigner, {
         registry: new Registry([
@@ -164,13 +189,10 @@ const TransactionSigning = (props: TransactionSigningProps) => {
           ...wasmTypes,
           ...lavajs.lavanetProtoRegistry,
           ...periodicVestingTypes,
+          ...msgGrantTypes,
+          ...execGrantTypes
         ]),
-        aminoTypes: new AminoTypes({
-          ...createDefaultAminoConverters(),
-          ...createWasmAminoConverters(),
-          ...lavajs.lavanetAminoConverters,
-          ...createPeriodicVestingAccount(),
-        }),
+        aminoTypes: aminoTypes,
       });
 
       const signerData = {

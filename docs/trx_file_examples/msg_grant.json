@@ -1,0 +1,27 @@
+[
+    {
+    "typeUrl": "/cosmos.authz.v1beta1.MsgGrant",
+    "value": {
+        "grant": {
+            "expiration": "2025-10-10T21:00:00.000Z",
+            "authorization": {
+                "typeUrl": "/cosmos.staking.v1beta1.StakeAuthorization",
+                "value": {
+                    "maxTokens": {
+                        "denom": "ulava",
+                        "amount": "100000000"
+                    },
+                    "allowList": {
+                        "address": [
+                            "lava@valoper1rgs6cp3vleue3vwffrvttjtl4laqhk8fl78jgd"
+                        ]
+                    },
+                    "authorizationType": 1
+                }
+            }
+        },
+        "grantee": "lava@1lws6rcrcdtxadc6c2j70sezwjwuzq6apq89ex6",
+        "granter": "lava@1e3yksvnp3wwqja79w7527k3th4yjyapmvp706e"
+    }
+}
+]

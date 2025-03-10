@@ -1,0 +1,19 @@
+[
+    {
+      "typeUrl": "/cosmos.authz.v1beta1.MsgGrant",
+      "value": {
+        "granter": "lava@1e3yksvnp3wwqja79w7527k3th4yjyapmvp706e",
+        "grantee": "lava@146chxxgm3xec2530sfz2qlsh0cry483uzhzmr0",
+        "grant": {
+          "authorization": {
+            "typeUrl": "/cosmos.authz.v1beta1.GenericAuthorization",
+            "value": {
+              "msg": "/cosmos.bank.v1beta1.MsgSend"
+            }
+          },
+          "expiration": null
+        }
+      }
+    }
+  ]
+  

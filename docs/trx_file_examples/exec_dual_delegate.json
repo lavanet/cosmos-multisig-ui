@@ -1,0 +1,23 @@
+[
+    {
+      "typeUrl": "/cosmos.authz.v1beta1.MsgExec",
+      "value": {
+        "grantee": "lava@146chxxgm3xec2530sfz2qlsh0cry483uzhzmr0",
+        "msgs": [
+          {
+            "typeUrl": "/lavanet.lava.dualstaking.MsgDelegate",
+            "value": {
+              "creator": "lava@1e3yksvnp3wwqja79w7527k3th4yjyapmvp706e",
+              "validator": "lava@valoper1rgs6cp3vleue3vwffrvttjtl4laqhk8fl78jgd",
+              "provider": "lava@1rgs6cp3vleue3vwffrvttjtl4laqhk8fthu466",
+              "chainID": "*",
+              "amount": {
+                "denom": "ulava",
+                "amount": "1"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]

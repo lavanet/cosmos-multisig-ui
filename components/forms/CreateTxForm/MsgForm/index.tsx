@@ -18,6 +18,8 @@ import MsgTransferForm from "./MsgTransferForm";
 import MsgUndelegateForm from "./MsgUndelegateForm";
 import MsgVoteForm from "./MsgVoteForm";
 import MsgCreatePeriodicVestingAccount from "./MsgCreatePeriodicVestingAccount";
+import MsgGrant from "./MsgGrantFileOnly";
+import MsgExectGrant from "./MsgExecGrantFileOnly";
 import { EncodeObject } from "@cosmjs/proto-signing";
 interface MsgFormProps {
   readonly msgType: MsgTypeUrl;
@@ -65,6 +67,10 @@ const MsgForm = ({ msgType, senderAddress, ...restProps }: MsgFormProps) => {
       return <MsgDualClaimRewardsForm delegatorAddress={senderAddress} {...restProps} />;
     case MsgTypeUrls.CreatePeriodicVestingAccount:
       return <MsgCreatePeriodicVestingAccount fromAddress={senderAddress} {...restProps} />;
+    case MsgTypeUrls.MsgGrant:
+      return <MsgGrant fromAddress={senderAddress} {...restProps} />;
+    case MsgTypeUrls.MsgExecGrant: 
+      return <MsgExectGrant fromAddress={senderAddress} {...restProps} />;
     default:
       return null;
   }

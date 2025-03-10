@@ -1,5 +1,5 @@
 import { loadValidators } from "@/context/ChainsContext/helpers";
-import { toastError, toastSuccess } from "@/lib/utils";
+import { cn, toastError, toastSuccess } from "@/lib/utils";
 import { EncodeObject } from "@cosmjs/proto-signing";
 import { Account, calculateFee } from "@cosmjs/stargate";
 import { assert } from "@cosmjs/utils";
@@ -20,6 +20,7 @@ import Button from "../../inputs/Button";
 import Input from "../../inputs/Input";
 import StackableContainer from "../../layout/StackableContainer";
 import MsgForm from "./MsgForm";
+import { ms } from "date-fns/locale";
 
 export interface MsgGetter {
   readonly isMsgValid: () => boolean;
@@ -95,9 +96,12 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
         // Perform necessary validation or state updates
         if (!Array.isArray(parsedContent)) {
           setFileError("Invalid file format. Please upload a valid messages");
+          console.error("x1");
           return;
         }
+        
         for (const msg of parsedContent) {
+          console.log(msg);
           if (
             !msg.typeUrl ||
             !msg.value ||
@@ -105,6 +109,7 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
             typeof msg.value !== "object"
           ) {
             setFileError("Invalid file format. Please upload a valid messages");
+            console.error("x2");
             return;
           }
           if (!SupportFileFeatureMsgTypes.includes(msg.typeUrl)) {
