@@ -59,7 +59,6 @@ const MultiSigForm = (props: Props) => {
   const getPubkeyFromNode = async (address: string) => {
     const client = await StargateClient.connect(chain.nodeAddress);
     const accountOnChain = await client.getAccount(address);
-    console.log(accountOnChain);
     if (!accountOnChain || !accountOnChain.pubkey) {
       throw new Error(
         "Account has no pubkey on chain, this address will need to send a transaction to appear on chain.",

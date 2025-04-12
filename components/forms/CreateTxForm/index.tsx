@@ -101,7 +101,6 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
         }
         
         for (const msg of parsedContent) {
-          console.log(msg);
           if (
             !msg.typeUrl ||
             !msg.value ||

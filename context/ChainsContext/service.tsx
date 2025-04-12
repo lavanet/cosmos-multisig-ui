@@ -71,6 +71,7 @@ export const useChainsFromRegistry = () => {
 };
 
 export const getNodeFromArray = async (nodeArray: readonly string[]) => {
+  console.log('node array', nodeArray); 
   // only return https connections
   const secureNodes = nodeArray
     .filter((address) => address.startsWith("https://"))
@@ -86,7 +87,9 @@ export const getNodeFromArray = async (nodeArray: readonly string[]) => {
       const client = await StargateClient.connect(node);
       await client.getHeight();
       return node;
-    } catch {}
+    } catch (e){
+      console.error("Failed to connect to node", node, e);
+    }
   }
 
   throw new Error("No RPC nodes available for this chain");

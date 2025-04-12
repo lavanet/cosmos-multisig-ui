@@ -75,9 +75,7 @@ const TransactionPage = ({
   const [transactionHash, setTransactionHash] = useState(txHash);
   const [accountOnChain, setAccountOnChain] = useState<Account | null>(null);
   const [pubkey, setPubkey] = useState<MultisigThresholdPubkey>();
-  console.log("transactionJSON===>", transactionJSON);  
   const txInfo = dbTxFromJson(transactionJSON);
-  console.log("txInfo===>", txInfo);
   const router = useRouter();
   const multisigAddress = router.query.address?.toString();
 

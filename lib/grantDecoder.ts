@@ -105,7 +105,6 @@ export function createAuthzAminoConverters(): Record<string, AminoConverter> {
       '/cosmos.authz.v1beta1.MsgGrant': {
         aminoType: 'cosmos-sdk/MsgGrant',
         toAmino: (data: MsgGrant) => {
-        console.log('toAmino data:', data); 
           const { granter, grantee, grant } = data;
           if (!grant || !grant.authorization) {
             throw new Error(
@@ -185,7 +184,6 @@ export function createAuthzAminoConverters(): Record<string, AminoConverter> {
         }): MsgGrant => {
           const authorizationType = grant?.authorization?.type;
           let authorizationValue;
-          console.log('from amino', grant);
           switch (authorizationType) {
             case 'cosmos-sdk/GenericAuthorization': {
               authorizationValue = {

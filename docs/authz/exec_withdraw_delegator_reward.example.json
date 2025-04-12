@@ -1,0 +1,18 @@
+[
+    {
+      "typeUrl": "/cosmos.authz.v1beta1.MsgExec",
+      "value": {
+        "grantee": "lava@146chxxgm3xec2530sfz2qlsh0cry483uzhzmr0",
+        "msgs": [
+          {
+            "typeUrl": "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward",
+            "value": {
+              "delegatorAddress": "lava@1e3yksvnp3wwqja79w7527k3th4yjyapmvp706e",
+              "validatorAddress": "lava@valoper1e35nhndvsw8wes9hq49ckpyzmwhswq40sklx20"
+            }
+          }
+        ]
+      }
+    }
+  ]
+  
