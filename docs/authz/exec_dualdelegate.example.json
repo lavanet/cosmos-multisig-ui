@@ -8,12 +8,12 @@
             "typeUrl": "/lavanet.lava.dualstaking.MsgDelegate",
             "value": {
               "creator": "lava@1e3yksvnp3wwqja79w7527k3th4yjyapmvp706e",
-              "validator": "lava@valoper1rgs6cp3vleue3vwffrvttjtl4laqhk8fl78jgd",
-              "provider": "lava@1rgs6cp3vleue3vwffrvttjtl4laqhk8fthu466",
+              "validator": "lava@valoper1jfap4c3chh6hprx0utekpxpwdgxwaheacgtvu5",
+              "provider": "lava@1mm99gwhexvtfr3qjhafn3ugl6z3xxuu6ndmvrn",
               "chainID": "*",
               "amount": {
                 "denom": "ulava",
-                "amount": "1"
+                "amount": "1000000"
               }
             }
           }

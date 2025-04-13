@@ -46,7 +46,7 @@ const gasOfMsg = (msgType: MsgTypeUrl): number => {
     case MsgTypeUrls.MsgGrant:
       return 400_000;
     case MsgTypeUrls.MsgExecGrant:
-      return 400_000;
+      return 2_000_000;
     default:
       throw new Error("Unknown msg type");
   }
