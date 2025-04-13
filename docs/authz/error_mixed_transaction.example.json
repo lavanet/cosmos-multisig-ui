@@ -1,0 +1,36 @@
+[
+    {
+      "typeUrl": "/cosmos.authz.v1beta1.MsgExec",
+      "value": {
+        "grantee": "lava@146chxxgm3xec2530sfz2qlsh0cry483uzhzmr0",
+        "msgs": [
+          {
+            "typeUrl": "/lavanet.lava.dualstaking.MsgDelegate",
+            "value": {
+              "creator": "lava@1e3yksvnp3wwqja79w7527k3th4yjyapmvp706e",
+              "validator": "lava@valoper1jfap4c3chh6hprx0utekpxpwdgxwaheacgtvu5",
+              "provider": "lava@1mm99gwhexvtfr3qjhafn3ugl6z3xxuu6ndmvrn",
+              "chainID": "*",
+              "amount": {
+                "denom": "ulava",
+                "amount": "1000000"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+        "typeUrl": "/cosmos.bank.v1beta1.MsgSend",
+        "value": {
+          "fromAddress": "lava@146chxxgm3xec2530sfz2qlsh0cry483uzhzmr0",
+          "toAddress": "lava@1lws6rcrcdtxadc6c2j70sezwjwuzq6apq89ex6",
+          "amount": [
+            {
+              "denom": "ulava",
+              "amount": "1"
+            }
+          ]
+        }
+      }
+  ]
