@@ -69,7 +69,7 @@ const MsgForm = ({ msgType, senderAddress, ...restProps }: MsgFormProps) => {
       return <MsgCreatePeriodicVestingAccount fromAddress={senderAddress} {...restProps} />;
     case MsgTypeUrls.MsgGrant:
       return <MsgGrant fromAddress={senderAddress} {...restProps} />;
-    case MsgTypeUrls.MsgExecGrant: 
+    case MsgTypeUrls.MsgExecGrant:
       return <MsgExectGrant fromAddress={senderAddress} {...restProps} />;
     default:
       return null;

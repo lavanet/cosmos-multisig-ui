@@ -52,8 +52,7 @@ const MsgDualRedelegateForm = ({
 
   useEffect(() => {
     // eslint-disable-next-line no-shadow
-    const { fromProviderAddress, toProviderAddress, amount } =
-      trimmedInputs;
+    const { fromProviderAddress, toProviderAddress, amount } = trimmedInputs;
 
     const isMsgValid = (): boolean => {
       setFromProviderAddressError("");

@@ -15,19 +15,12 @@ interface MsgSendFormProps {
 const MsgGrant = ({ fromAddress, setMsgGetter, deleteMsg, msg: msgProps }: MsgSendFormProps) => {
   const { chain } = useChains();
 
-  if (!msgProps) return null;
-
   useEffect(() => {
-    setMsgGetter({ isMsgValid: () => true, msg: { typeUrl: MsgTypeUrls.MsgExecGrant, value: msgProps } });
-  }
-  ,  [
-    chain.addressPrefix,
-    chain.assets,
-    chain.chainId,
-    fromAddress,
-    setMsgGetter,
-    msgProps,
-  ]);
+    setMsgGetter({
+      isMsgValid: () => true,
+      msg: { typeUrl: MsgTypeUrls.MsgExecGrant, value: msgProps },
+    });
+  }, [chain.addressPrefix, chain.assets, chain.chainId, fromAddress, setMsgGetter, msgProps]);
 
   return (
     <StackableContainer lessPadding lessMargin>

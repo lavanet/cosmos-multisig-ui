@@ -1,7 +1,4 @@
 import { MsgSend } from "cosmjs-types/cosmos/bank/v1beta1/tx";
-import { useChains } from "../../../context/ChainsContext";
-import { printableCoins } from "../../../lib/displayHelpers";
-import HashView from "../HashView";
 
 interface TxMsgGrantDetailsProps {
   readonly msgValue: MsgSend;
@@ -9,8 +6,6 @@ interface TxMsgGrantDetailsProps {
 }
 
 const txRawDetails = ({ msgValue, label }: TxMsgGrantDetailsProps) => {
-  const { chain } = useChains();
-
   return (
     <>
       <li>
@@ -18,10 +13,10 @@ const txRawDetails = ({ msgValue, label }: TxMsgGrantDetailsProps) => {
       </li>
       <li>
         <div className="jsonContainer">
-            <pre>{JSON.stringify(msgValue, null, 2)}</pre>
+          <pre>{JSON.stringify(msgValue, null, 2)}</pre>
         </div>
       </li>
-      
+
       <style jsx>{`
         li:not(:has(h3)) {
           background: rgba(255, 255, 255, 0.03);

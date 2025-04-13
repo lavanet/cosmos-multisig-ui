@@ -29,19 +29,22 @@ const emptyProvider = {
     securityContact: "",
     details: "",
   },
-}
+};
 interface SelectProviderProps {
   readonly providerAddress: string;
   readonly setProviderAddress: (providerAddress: string) => void;
   readonly addEmptyProvider?: boolean;
 }
 
-function SelectProviderNext({ providerAddress, setProviderAddress, addEmptyProvider }: SelectProviderProps) {
+function SelectProviderNext({
+  providerAddress,
+  setProviderAddress,
+  addEmptyProvider,
+}: SelectProviderProps) {
   const { chain } = useChains();
   const [open, setOpen] = useState(false);
   const [providers, setProviders] = useState<readonly ProviderMetadata[]>();
   const [searchText, setSearchText] = useState("");
- 
 
   useEffect(() => {
     const updateProviders = async () => {
@@ -63,7 +66,7 @@ function SelectProviderNext({ providerAddress, setProviderAddress, addEmptyProvi
     };
 
     updateProviders();
-  }, [chain.nodeAddress]);
+  }, [chain.nodeAddress, addEmptyProvider]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

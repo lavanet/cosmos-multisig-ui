@@ -30,10 +30,8 @@ import {
 } from "@/lib/periodicVestingAccountDecoder";
 import { createAuthzAminoConverters, msgGrantTypes } from "@/lib/grantDecoder";
 import { exportMsgToJson } from "@/lib/txMsgHelpers";
-import { TxBody } from "cosmjs-types/cosmos/tx/v1beta1/tx";
-import { Any } from "cosmjs-types/google/protobuf/any";
-import {authzAminoSign} from "@/lib/authzAminoSinger";
-import { createMsgAuthz } from "@/lib/msg_authz_registry"
+import { authzAminoSign } from "@/lib/authzAminoSinger";
+import { createMsgAuthz } from "@/lib/msg_authz_registry";
 
 interface TransactionSigningProps {
   readonly signatures: DbSignature[];
@@ -162,7 +160,7 @@ const TransactionSigning = (props: TransactionSigningProps) => {
 
       const signerAddress = walletAccount?.bech32Address;
       assert(signerAddress, "Missing signer address");
-     
+
       const aminoTypes = new AminoTypes({
         ...createDefaultAminoConverters(),
         ...createWasmAminoConverters(),
@@ -205,15 +203,15 @@ const TransactionSigning = (props: TransactionSigningProps) => {
           props.tx.memo,
           signerData,
         ));
-     } else {
-      ({ bodyBytes, signatures } = await signingClient.sign(
-        signerAddress,
-        props.tx.msgs,
-        props.tx.fee,
-        props.tx.memo,
-        signerData,
-      ));
-     }
+      } else {
+        ({ bodyBytes, signatures } = await signingClient.sign(
+          signerAddress,
+          props.tx.msgs,
+          props.tx.fee,
+          props.tx.memo,
+          signerData,
+        ));
+      }
 
       const bases64EncodedSignature = toBase64(signatures[0]);
       const bases64EncodedBodyBytes = toBase64(bodyBytes);

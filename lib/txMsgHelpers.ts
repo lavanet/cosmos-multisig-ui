@@ -1,7 +1,6 @@
 import { EncodeObject } from "@cosmjs/proto-signing";
 import { DbTransaction } from "../types";
 import { MsgCodecs, MsgTypeUrl, MsgTypeUrls } from "../types/txMsg";
-import { ms } from "date-fns/locale";
 
 const gasOfMsg = (msgType: MsgTypeUrl): number => {
   switch (msgType) {
@@ -63,13 +62,13 @@ export const isKnownMsgTypeUrl = (typeUrl: string): typeUrl is MsgTypeUrl =>
 
 export const exportMsgToJson = (msg: EncodeObject): EncodeObject => {
   if (isKnownMsgTypeUrl(msg.typeUrl)) {
-    if(msg.typeUrl === MsgTypeUrls.MsgGrant || msg.typeUrl === MsgTypeUrls.MsgExecGrant) {
-      // // docode inner trx 
+    if (msg.typeUrl === MsgTypeUrls.MsgGrant || msg.typeUrl === MsgTypeUrls.MsgExecGrant) {
+      // // docode inner trx
       // const value = MsgCodecs[msg.typeUrl].toJSON(msg.value);
       // // @ts-ignore
-      // const authz = value.authorization; 
+      // const authz = value.authorization;
       // //@ts-ignore
-      // value.authorization.value = MsgCodecs[authz.typeUrl].toJSON(authz.value); 
+      // value.authorization.value = MsgCodecs[authz.typeUrl].toJSON(authz.value);
       return { ...msg, value: msg.value };
     }
     return { ...msg, value: MsgCodecs[msg.typeUrl].toJSON(msg.value) };
@@ -80,9 +79,9 @@ export const exportMsgToJson = (msg: EncodeObject): EncodeObject => {
 
 const importMsgFromJson = (msg: EncodeObject): EncodeObject => {
   if (isKnownMsgTypeUrl(msg.typeUrl)) {
-    if(msg.typeUrl === MsgTypeUrls.MsgGrant || msg.typeUrl === MsgTypeUrls.MsgExecGrant) { 
+    if (msg.typeUrl === MsgTypeUrls.MsgGrant || msg.typeUrl === MsgTypeUrls.MsgExecGrant) {
       return { ...msg, value: msg.value };
-    };
+    }
     const parsedValue = MsgCodecs[msg.typeUrl].fromJSON(msg.value);
     return { ...msg, value: parsedValue };
   }

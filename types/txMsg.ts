@@ -19,7 +19,7 @@ import {
   MsgInstantiateContract2,
   MsgMigrateContract,
 } from "cosmjs-types/cosmwasm/wasm/v1/tx";
-import { MsgGrant } from "cosmjs-types/cosmos/authz/v1beta1/tx"
+import { MsgGrant } from "cosmjs-types/cosmos/authz/v1beta1/tx";
 import { MsgTransfer } from "cosmjs-types/ibc/applications/transfer/v1/tx";
 import { MsgDualClaimRewards, MsgDualDelegate, MsgDualRedelegate, MsgDualUnbond } from "./lava";
 import { StakeAuthorization } from "@lavanet/lavajs/dist/codegen/cosmos/staking/v1beta1/authz";
@@ -72,7 +72,6 @@ export const MsgCodecs = {
   [MsgTypeUrls.MsgGrant]: MsgGrant,
   [MsgTypeUrls.StakeAuthorization]: StakeAuthorization,
   [MsgTypeUrls.MsgExecGrant]: MsgGrant,
-
 } as const;
 export const SupportFileFeatureMsgTypes = [
   MsgTypeUrls.Send,
@@ -88,7 +87,7 @@ export const SupportFileFeatureMsgTypes = [
   MsgTypeUrls.DualClaimRewards,
   MsgTypeUrls.DualUnbond,
   MsgTypeUrls.MsgGrant,
-  MsgTypeUrls.MsgExecGrant
+  MsgTypeUrls.MsgExecGrant,
 ] as const;
 // MsgTypes to load validator list
 export const validatorMsgsType = [
@@ -98,5 +97,4 @@ export const validatorMsgsType = [
   MsgTypeUrls.Delegate,
   MsgTypeUrls.DualDelegate,
   MsgTypeUrls.DualUnbond,
-];  
-
+];

@@ -1,5 +1,5 @@
 import { loadValidators } from "@/context/ChainsContext/helpers";
-import { cn, toastError, toastSuccess } from "@/lib/utils";
+import { toastError, toastSuccess } from "@/lib/utils";
 import { EncodeObject } from "@cosmjs/proto-signing";
 import { Account, calculateFee } from "@cosmjs/stargate";
 import { assert } from "@cosmjs/utils";
@@ -20,7 +20,6 @@ import Button from "../../inputs/Button";
 import Input from "../../inputs/Input";
 import StackableContainer from "../../layout/StackableContainer";
 import MsgForm from "./MsgForm";
-import { ms } from "date-fns/locale";
 
 export interface MsgGetter {
   readonly isMsgValid: () => boolean;
@@ -99,7 +98,7 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
           console.error("x1");
           return;
         }
-        
+
         for (const msg of parsedContent) {
           if (
             !msg.typeUrl ||
