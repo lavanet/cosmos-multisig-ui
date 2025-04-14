@@ -13,6 +13,8 @@ export const getAllValidators = async (rpcUrl: string): Promise<readonly Validat
   console.log({ rpcUrl });
   const cometClient = await connectComet(rpcUrl);
   console.log({ cometClient });
+  // eslint-disable-next-line 
+  //@ts-ignore
   const queryClient = QueryClient.withExtensions(cometClient, setupStakingExtension);
   console.log({ queryClient });
 

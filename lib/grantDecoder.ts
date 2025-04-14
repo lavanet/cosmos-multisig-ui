@@ -102,7 +102,8 @@ export function createAuthzAminoConverters(): Record<string, AminoConverter> {
   return {
     "/cosmos.authz.v1beta1.MsgGrant": {
       aminoType: "cosmos-sdk/MsgGrant",
-      toAmino: (data: MsgGrant) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      toAmino: (data: any) => {
         const { granter, grantee, grant } = data;
         if (!grant || !grant.authorization) {
           throw new Error(`Unsupported grant type: '${grant?.authorization?.typeUrl}'`);
