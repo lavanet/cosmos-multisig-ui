@@ -32,9 +32,10 @@ type MsgType = {
 
 export const createMsgAuthz = (msgs: MsgType[]): IMsgBase[] => {
   const msg = msgs.map((m) => {
-    if (m.typeUrl !== "/cosmos.authz.v1beta1.MsgExec")
-      {throw new Error(`msg type is not authz exect: ${m.typeUrl}`);}
-    const innerMsgs = m.value.msgs.map((innerMsg: {typeUrl: string, value: unknown}) => {
+    if (m.typeUrl !== "/cosmos.authz.v1beta1.MsgExec") {
+      throw new Error(`msg type is not authz exect: ${m.typeUrl}`);
+    }
+    const innerMsgs = m.value.msgs.map((innerMsg: { typeUrl: string; value: unknown }) => {
       const Msg = authzRegistry.get(innerMsg.typeUrl);
       if (!Msg) {
         throw new Error(`No message found for type URL: ${innerMsg.typeUrl}`);

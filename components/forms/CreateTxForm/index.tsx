@@ -95,7 +95,6 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
         // Perform necessary validation or state updates
         if (!Array.isArray(parsedContent)) {
           setFileError("Invalid file format. Please upload a valid messages");
-          console.error("x1");
           return;
         }
 
@@ -107,7 +106,6 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
             typeof msg.value !== "object"
           ) {
             setFileError("Invalid file format. Please upload a valid messages");
-            console.error("x2");
             return;
           }
           if (!SupportFileFeatureMsgTypes.includes(msg.typeUrl)) {

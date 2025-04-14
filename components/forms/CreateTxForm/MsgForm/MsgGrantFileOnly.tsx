@@ -15,7 +15,6 @@ interface MsgSendFormProps {
 const MsgGrant = ({ fromAddress, setMsgGetter, deleteMsg, msg: msgProps }: MsgSendFormProps) => {
   const { chain } = useChains();
 
-
   useEffect(() => {
     setMsgGetter({
       isMsgValid: () => true,

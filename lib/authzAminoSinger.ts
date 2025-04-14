@@ -22,7 +22,7 @@ const makeBodyBytes = (
   };
 
   return TxBody.encode(
-    // eslint-disable-next-line 
+    // eslint-disable-next-line
     // @ts-ignore
     TxBody.fromPartial(txBody),
   ).finish();
