@@ -22,6 +22,7 @@ import TxMsgSetWithdrawAddressDetails from "./TxMsgSetWithdrawAddressDetails";
 import TxMsgTransferDetails from "./TxMsgTransferDetails";
 import TxMsgUndelegateDetails from "./TxMsgUndelegateDetails";
 import TxMsgVoteDetails from "./TxMsgVoteDetails";
+import TxRawDetails from "./TxRawDetails";
 
 const TxMsgDetails = ({ typeUrl, value: msgValue }: EncodeObject) => {
   switch (typeUrl) {
@@ -61,6 +62,10 @@ const TxMsgDetails = ({ typeUrl, value: msgValue }: EncodeObject) => {
       return <TxMsgDualClaimRewardsDetails msgValue={msgValue} />;
     case MsgTypeUrls.CreatePeriodicVestingAccount:
       return <TxMsgCreatePeriodicVestingAccountDetails msgValue={msgValue} />;
+    case MsgTypeUrls.MsgGrant:
+      return <TxRawDetails msgValue={msgValue} label="Msg Grant" />;
+    case MsgTypeUrls.MsgExecGrant:
+      return <TxRawDetails msgValue={msgValue} label="Msg Exec Grant" />;
     default:
       return null;
   }

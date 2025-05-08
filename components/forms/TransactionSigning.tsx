@@ -28,7 +28,10 @@ import {
   createPeriodicVestingAccount,
   periodicVestingTypes,
 } from "@/lib/periodicVestingAccountDecoder";
+import { createAuthzAminoConverters, msgGrantTypes } from "@/lib/grantDecoder";
 import { exportMsgToJson } from "@/lib/txMsgHelpers";
+import { authzAminoSign } from "@/lib/authzAminoSinger";
+import { createMsgAuthz } from "@/lib/msg_authz_registry";
 
 interface TransactionSigningProps {
   readonly signatures: DbSignature[];
@@ -158,19 +161,23 @@ const TransactionSigning = (props: TransactionSigningProps) => {
       const signerAddress = walletAccount?.bech32Address;
       assert(signerAddress, "Missing signer address");
 
+      const aminoTypes = new AminoTypes({
+        ...createDefaultAminoConverters(),
+        ...createWasmAminoConverters(),
+        ...lavajs.lavanetAminoConverters,
+        ...createPeriodicVestingAccount(),
+        ...createAuthzAminoConverters(),
+      });
+
       const signingClient = await SigningStargateClient.offline(offlineSigner, {
         registry: new Registry([
           ...defaultRegistryTypes,
           ...wasmTypes,
           ...lavajs.lavanetProtoRegistry,
           ...periodicVestingTypes,
+          ...msgGrantTypes,
         ]),
-        aminoTypes: new AminoTypes({
-          ...createDefaultAminoConverters(),
-          ...createWasmAminoConverters(),
-          ...lavajs.lavanetAminoConverters,
-          ...createPeriodicVestingAccount(),
-        }),
+        aminoTypes: aminoTypes,
       });
 
       const signerData = {
@@ -178,16 +185,34 @@ const TransactionSigning = (props: TransactionSigningProps) => {
         sequence: props.tx.sequence,
         chainId: chain.chainId,
       };
+      // We need to dicide which signer to use
+      const isAuthzExec = props.tx.msgs.every((msg) => {
+        return msg.typeUrl === "/cosmos.authz.v1beta1.MsgExec";
+      });
 
-      const { bodyBytes, signatures } = await signingClient.sign(
-        signerAddress,
-        props.tx.msgs,
-        props.tx.fee,
-        props.tx.memo,
-        signerData,
-      );
+      let bodyBytes: Uint8Array;
+      let signatures: Uint8Array[];
 
-      // check existing signatures
+      if (isAuthzExec) {
+        const execMsgs = createMsgAuthz(props.tx.msgs);
+        ({ bodyBytes, signatures } = await authzAminoSign(
+          signerAddress,
+          execMsgs,
+          offlineSigner,
+          props.tx.fee,
+          props.tx.memo,
+          signerData,
+        ));
+      } else {
+        ({ bodyBytes, signatures } = await signingClient.sign(
+          signerAddress,
+          props.tx.msgs,
+          props.tx.fee,
+          props.tx.memo,
+          signerData,
+        ));
+      }
+
       const bases64EncodedSignature = toBase64(signatures[0]);
       const bases64EncodedBodyBytes = toBase64(bodyBytes);
       const prevSigMatch = props.signatures.findIndex(

@@ -97,6 +97,7 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
           setFileError("Invalid file format. Please upload a valid messages");
           return;
         }
+
         for (const msg of parsedContent) {
           if (
             !msg.typeUrl ||

@@ -76,7 +76,6 @@ const TransactionPage = ({
   const [accountOnChain, setAccountOnChain] = useState<Account | null>(null);
   const [pubkey, setPubkey] = useState<MultisigThresholdPubkey>();
   const txInfo = dbTxFromJson(transactionJSON);
-  console.log("txInfo===>", txInfo);
   const router = useRouter();
   const multisigAddress = router.query.address?.toString();
 
@@ -119,6 +118,7 @@ const TransactionPage = ({
       );
       assert(pubkey, "Pubkey not found on chain or in database");
       assert(txInfo, "Transaction not found in database");
+      console.log(currentSignatures);
       const bodyBytes = fromBase64(currentSignatures[0].bodyBytes);
       const signedTxBytes = makeMultisignedTxBytes(
         pubkey,

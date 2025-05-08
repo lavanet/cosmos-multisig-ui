@@ -19,8 +19,10 @@ import {
   MsgInstantiateContract2,
   MsgMigrateContract,
 } from "cosmjs-types/cosmwasm/wasm/v1/tx";
+import { MsgGrant } from "cosmjs-types/cosmos/authz/v1beta1/tx";
 import { MsgTransfer } from "cosmjs-types/ibc/applications/transfer/v1/tx";
 import { MsgDualClaimRewards, MsgDualDelegate, MsgDualRedelegate, MsgDualUnbond } from "./lava";
+import { StakeAuthorization } from "@lavanet/lavajs/dist/codegen/cosmos/staking/v1beta1/authz";
 
 export const MsgTypeUrls = {
   Send: "/cosmos.bank.v1beta1.MsgSend",
@@ -41,6 +43,9 @@ export const MsgTypeUrls = {
   DualUnbond: "/lavanet.lava.dualstaking.MsgUnbond",
   DualClaimRewards: "/lavanet.lava.dualstaking.MsgClaimRewards",
   CreatePeriodicVestingAccount: "/cosmos.vesting.v1beta1.MsgCreatePeriodicVestingAccount",
+  MsgGrant: "/cosmos.authz.v1beta1.MsgGrant",
+  StakeAuthorization: "/cosmos.staking.v1beta1.StakeAuthorization",
+  MsgExecGrant: "/cosmos.authz.v1beta1.MsgExec",
 } as const;
 
 export type MsgTypeUrl = (typeof MsgTypeUrls)[keyof typeof MsgTypeUrls];
@@ -64,7 +69,10 @@ export const MsgCodecs = {
   [MsgTypeUrls.DualRedelegate]: MsgDualRedelegate,
   [MsgTypeUrls.DualUnbond]: MsgDualUnbond,
   [MsgTypeUrls.DualClaimRewards]: MsgDualClaimRewards,
-};
+  [MsgTypeUrls.MsgGrant]: MsgGrant,
+  [MsgTypeUrls.StakeAuthorization]: StakeAuthorization,
+  [MsgTypeUrls.MsgExecGrant]: MsgGrant,
+} as const;
 export const SupportFileFeatureMsgTypes = [
   MsgTypeUrls.Send,
   MsgTypeUrls.WithdrawDelegatorReward,
@@ -78,6 +86,8 @@ export const SupportFileFeatureMsgTypes = [
   MsgTypeUrls.DualRedelegate,
   MsgTypeUrls.DualClaimRewards,
   MsgTypeUrls.DualUnbond,
+  MsgTypeUrls.MsgGrant,
+  MsgTypeUrls.MsgExecGrant,
 ] as const;
 // MsgTypes to load validator list
 export const validatorMsgsType = [
