@@ -247,8 +247,10 @@ const MsgCreatePeriodicVestingAccount = ({
           label="Start time"
           name="end-time"
           value={startTime}
-          onChange={({ target }) => {
-            setEndTime(target.value);
+          onChange={(e) => {
+            const ms = e.currentTarget.valueAsNumber;         
+            if (Number.isNaN(ms)) return; // user typed garbage—ignore or show error
+            setEndTime(datetimeLocalFromTimestamp(ms, "ms")); 
             setEndTimeError("");
           }}
           error={startTimeError}
