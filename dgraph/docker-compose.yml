@@ -2,25 +2,31 @@ services:
   dgraph:
     image: dgraph/standalone:latest
     container_name: dgraph
+    restart: always
     ports:
       - "9080:9080"
       - "8080:8080"
     volumes:
       - ./dgraph-data:/dgraph
 
-  nginx:
-    image: nginx:alpine
-    container_name: dgraph-nginx
+  caddy:
+    image: caddy:2-alpine
+    container_name: dgraph-caddy
     depends_on: [dgraph]
+    restart: always
     environment:
       DGRAPH_HOST: dgraph
       DGRAPH_HTTP_PORT: "8080"
+      AUTH_TOKEN: "${AUTH_TOKEN}"
     ports:
       - "80:80"
+      - "443:443"
     volumes:
-      - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./secrets/auth_token:/run/secrets/auth_token:ro
+      - ./caddy-data:/data
+      - ./caddy-config:/config
     entrypoint: ["/bin/sh","-c",
-      # read token from file, export for template rendering, then start
-      "export AUTH_TOKEN=$(cat /run/secrets/auth_token) && exec /docker-entrypoint.sh nginx -g 'daemon off;'"
-      ]
+      "export AUTH_TOKEN=$(cat /run/secrets/auth_token) && \
+       exec /usr/bin/caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"
+    ]

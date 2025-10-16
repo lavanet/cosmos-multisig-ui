@@ -1,0 +1,19 @@
+dgraph-sig.lavanet.xyz {
+        # Health check
+        handle_path /healthz {
+                header Content-Type text/plain
+                respond "ok\n" 200
+        }
+
+        # Authorized GraphQL: require X-Auth-Token header
+        @auth header X-Auth-Token {$AUTH_TOKEN}
+        handle @auth {
+                reverse_proxy {env.DGRAPH_HOST}:{env.DGRAPH_HTTP_PORT}
+        }
+
+        # Unauthenticated → 401
+        handle {
+                header WWW-Authenticate "X-Auth-Token realm=\"Restricted\""
+                respond 401
+        }
+}
