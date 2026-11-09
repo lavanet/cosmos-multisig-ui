@@ -1,3 +1,4 @@
+import { validateCancelUnbondingMessages } from "../../../lib/cancelUnbonding";
 import { loadValidators } from "@/context/ChainsContext/helpers";
 import { toastError, toastSuccess } from "@/lib/utils";
 import { EncodeObject } from "@cosmjs/proto-signing";
@@ -158,6 +159,7 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
       }
 
       setProcessing(true);
+      await validateCancelUnbondingMessages(chain.nodeAddress, msgs, senderAddress);
 
       const tx: DbTransaction = {
         accountNumber: accountOnChain.accountNumber,
@@ -329,6 +331,13 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
                 label="Undelegate"
                 onClick={() => addMsgWithValidator(MsgTypeUrls.Undelegate)}
                 featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Undelegate)}
+              />
+            </li>
+            <li>
+              <Button
+                label="Cancel unbonding"
+                onClick={() => addMsgType(MsgTypeUrls.CancelUnbondingDelegation)}
+                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.CancelUnbondingDelegation)}
               />
             </li>
             <li>

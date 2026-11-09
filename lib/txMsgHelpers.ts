@@ -18,6 +18,7 @@ const gasOfMsg = (msgType: MsgTypeUrl): number => {
       // This is enough for 1 delegation and 1 autoclaim. But it is probably too low for
       // a lot of auto-claims. See https://github.com/cosmos/cosmos-multisig-ui/issues/177.
       return 400_000;
+    case MsgTypeUrls.CancelUnbondingDelegation:
     case MsgTypeUrls.Undelegate:
       return 400_000;
     case MsgTypeUrls.CreateVestingAccount:

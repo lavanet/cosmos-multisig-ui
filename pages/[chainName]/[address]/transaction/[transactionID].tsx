@@ -1,3 +1,4 @@
+import { validateCancelUnbondingMessages } from "../../../../lib/cancelUnbonding";
 import { isChainInfoFilled } from "@/context/ChainsContext/helpers";
 import { toastError, toastSuccess } from "@/lib/utils";
 import { MultisigThresholdPubkey } from "@cosmjs/amino";
@@ -128,6 +129,8 @@ const TransactionPage = ({
         new Map(currentSignatures.map((s) => [s.address, fromBase64(s.signature)])),
       );
 
+      assert(multisigAddress, "Multisig address missing");
+      await validateCancelUnbondingMessages(chain.nodeAddress, txInfo.msgs, multisigAddress);
       const broadcaster = await StargateClient.connect(chain.nodeAddress);
       const result = await broadcaster.broadcastTx(signedTxBytes);
       console.log(result);
