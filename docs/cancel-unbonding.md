@@ -1,14 +1,17 @@
 # Cancel unbonding
 
-Under **Create New Transaction → Staking → Cancel unbonding**, select one pending
-unbonding entry. Each option shows the validator, remaining balance, completion
-time, and creation height. The selected-entry summary includes the full validator
-address. The amount defaults to the full remaining balance; enter a smaller amount
-to cancel partially. Tokens return to delegation with the same validator.
+Under **Create New Transaction → Staking → Cancel unbonding**, use the checkboxes
+to select individual pending entries, all entries for one validator, or all
+available entries. Each row shows the balance, completion time, and creation
+height; each validator group includes its full address. Selected amounts default
+to the full balance and can be edited for partial cancellation. The summary shows
+the selected entry/message count and total amount returning to staking.
 
-Other unbonding entries are unaffected. Add more cancellation messages to cancel
-multiple entries. The combined requested amount for any one entry cannot exceed
-its current balance.
+Selected entries become separate cancellation messages in one multisig proposal.
+Unselected entries are unaffected. The combined requested amount for any one
+entry cannot exceed its current balance, even across multiple cancellation forms.
+The batch is atomic: if one message fails on chain, none of the cancellations
+execute. Clear selection resets the batch, including stale entries after refresh.
 
 The picker queries all unbonding pages and each relevant validator, rather than
 limiting selection to the bonded validator list. Unavailable, jailed, invalid-rate,
@@ -58,8 +61,11 @@ npm run dev -- --hostname 127.0.0.1 --port 3100
 
 Tests cover pagination/cleanup, full and partial cancellation, stale/missing
 entries, jailed validators, invalid amounts/denominations/heights, cumulative
-balance checks, picker interactions/retry/import, exact JSON/protobuf/Amino round
-trips, and offline 2-of-2 multisig signing/assembly.
+balance checks, checkbox selection across validators/retry/import, exact
+JSON/protobuf/Amino round trips, and offline 2-of-2 multisig signing/assembly for
+one and 19 messages. Parent-form integration tests run in React StrictMode and
+verify all 19 messages are saved in one proposal, stale batches are blocked, and
+gas updates correctly on selection, deselection, and form removal.
 
 On 2026-11-09, read-only Lava mainnet checks retrieved 19 pending entries for the
 supplied multisig. Cosmos `Simulate` accepted both partial and full cancellation
@@ -67,7 +73,15 @@ of entry height 6159752, using 306,874 and 305,494 gas respectively. The default
 400,000 per cancellation plus the existing 100,000 transaction overhead; actual
 gas depends on validator state and message composition. No transaction was
 broadcast. Browser checks confirmed selection, exact balance defaults, partial
-editing, and excessive-amount rejection.
+editing, and excessive-amount rejection. A separate read-only simulation of the
+complete 19-entry batch succeeded at 4,181,399 gas, below the 7,700,000 default
+estimate. This is a point-in-time check, not automatic gas simulation in the UI.
+
+The UI currently uses the per-message gas estimate. It does not automatically
+simulate batches, check Ledger payload/review limits, or split proposals into
+smaller batches. Physical Ledger review/signing has not been tested. The measured
+19-entry Amino payload was 5,475 bytes with an empty memo and sample fee; this does
+not guarantee compatibility with every device or installed Cosmos app version.
 
 Saving proposals and collecting real wallet signatures require the deployment's
 Dgraph configuration and participating wallets. Those external persistence and

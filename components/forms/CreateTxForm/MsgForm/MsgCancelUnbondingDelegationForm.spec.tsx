@@ -59,11 +59,11 @@ beforeEach(() => {
 
 it("requires selection, defaults only the selected entry to its full balance, and allows partial cancellation", async () => {
   renderForm();
-  await screen.findByRole("option", { name: /Validator 1/ });
+  await screen.findByRole("checkbox", { name: "Select entry 1" });
   act(() => {
     expect(getter.isMsgValid()).toBe(false);
   });
-  fireEvent.change(screen.getByRole("combobox"), { target: { value: "validator2/2" } });
+  fireEvent.click(screen.getByRole("checkbox", { name: "Select entry 2" }));
   expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe("2");
   expect(getter.msg.value.validatorAddress).toBe("validator2");
   expect(getter.msg.value.creationHeight).toBe(BigInt(2));
@@ -101,7 +101,7 @@ it("preserves imported partial amount and rejects expired or missing imported en
     creationHeight: "1",
     amount: { denom: "ulava", amount: "250000" },
   });
-  await screen.findByRole("option", { name: /Validator 1/ });
+  await screen.findByRole("checkbox", { name: "Select entry 1" });
   expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe("0.25");
   act(() => {
     expect(getter.isMsgValid()).toBe(true);
@@ -112,11 +112,37 @@ it("preserves imported partial amount and rejects expired or missing imported en
   fireEvent.click(screen.getByRole("button", { name: "Refresh entries" }));
   await waitFor(() =>
     expect(
-      (screen.getByRole("option", { name: /Validator 1/ }) as HTMLOptionElement).disabled,
+      (screen.getByRole("checkbox", { name: "Select entry 1" }) as HTMLInputElement).disabled,
     ).toBe(true),
   );
   act(() => {
     expect(getter.isMsgValid()).toBe(false);
   });
   expect(screen.getByRole("alert").textContent).toContain("completed");
+});
+
+it("selects all entries across validators, emits distinct messages, and supports deselection", async () => {
+  renderForm();
+  await screen.findByRole("checkbox", { name: "Select entry 1" });
+  fireEvent.click(screen.getByRole("checkbox", { name: "Select all pending entries" }));
+  expect(getter.msgs).toHaveLength(2);
+  expect(getter.msgs?.map((message) => message.value.creationHeight)).toEqual([
+    BigInt(1),
+    BigInt(2),
+  ]);
+  expect(screen.getByText("3 lava returning to staking")).toBeTruthy();
+  act(() => expect(getter.isMsgValid()).toBe(true));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Select all for Validator 1" }));
+  expect(getter.msgs).toHaveLength(1);
+  expect(getter.msgs?.[0].value.validatorAddress).toBe("validator2");
+});
+it("excludes unavailable entries from select all", async () => {
+  const data = snapshot();
+  data.entries[0].unavailableReason = "Validator is jailed";
+  (getUnbondingSnapshot as jest.Mock).mockResolvedValueOnce(data);
+  renderForm();
+  await screen.findByRole("checkbox", { name: "Select entry 1" });
+  fireEvent.click(screen.getByRole("checkbox", { name: "Select all pending entries" }));
+  expect(getter.msgs).toHaveLength(1);
+  expect(getter.msgs?.[0].value.validatorAddress).toBe("validator2");
 });
