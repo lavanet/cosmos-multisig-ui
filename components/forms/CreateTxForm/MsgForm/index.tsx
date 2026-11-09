@@ -1,3 +1,4 @@
+import MsgCancelUnbondingDelegationForm from "./MsgCancelUnbondingDelegationForm";
 import { MsgGetter } from "..";
 import { MsgTypeUrl, MsgTypeUrls } from "../../../../types/txMsg";
 import MsgClaimRewardsForm from "./MsgClaimRewardsForm";
@@ -35,6 +36,8 @@ const MsgForm = ({ msgType, senderAddress, ...restProps }: MsgFormProps) => {
       return <MsgSendForm fromAddress={senderAddress} {...restProps} />;
     case MsgTypeUrls.Delegate:
       return <MsgDelegateForm delegatorAddress={senderAddress} {...restProps} />;
+    case MsgTypeUrls.CancelUnbondingDelegation:
+      return <MsgCancelUnbondingDelegationForm delegatorAddress={senderAddress} {...restProps} />;
     case MsgTypeUrls.Undelegate:
       return <MsgUndelegateForm delegatorAddress={senderAddress} {...restProps} />;
     case MsgTypeUrls.BeginRedelegate:

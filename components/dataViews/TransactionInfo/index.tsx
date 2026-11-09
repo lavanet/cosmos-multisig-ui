@@ -1,3 +1,4 @@
+import TxMsgCancelUnbondingDelegationDetails from "./TxMsgCancelUnbondingDelegationDetails";
 import { EncodeObject } from "@cosmjs/proto-signing";
 import { useChains } from "../../../context/ChainsContext";
 import { printableCoins } from "../../../lib/displayHelpers";
@@ -32,6 +33,8 @@ const TxMsgDetails = ({ typeUrl, value: msgValue }: EncodeObject) => {
       return <TxMsgVoteDetails msgValue={msgValue} />;
     case MsgTypeUrls.Delegate:
       return <TxMsgDelegateDetails msgValue={msgValue} />;
+    case MsgTypeUrls.CancelUnbondingDelegation:
+      return <TxMsgCancelUnbondingDelegationDetails msgValue={msgValue} />;
     case MsgTypeUrls.Undelegate:
       return <TxMsgUndelegateDetails msgValue={msgValue} />;
     case MsgTypeUrls.BeginRedelegate:

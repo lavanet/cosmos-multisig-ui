@@ -1,3 +1,4 @@
+import { validateCancelUnbondingMessages } from "../../../lib/cancelUnbonding";
 import { loadValidators } from "@/context/ChainsContext/helpers";
 import { toastError, toastSuccess } from "@/lib/utils";
 import { EncodeObject } from "@cosmjs/proto-signing";
@@ -24,6 +25,7 @@ import MsgForm from "./MsgForm";
 export interface MsgGetter {
   readonly isMsgValid: () => boolean;
   readonly msg: EncodeObject;
+  readonly msgs?: readonly EncodeObject[];
 }
 
 interface CreateTxFormProps {
@@ -65,9 +67,9 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
         ...oldMsgTypes,
         [newMsgType, msg],
       ];
-      setGasLimit(gasOfTx(newMsgTypes.map(([msgType]) => msgType)));
       return newMsgTypes;
     });
+    setGasLimit((previous) => previous + gasOfTx([newMsgType]) - gasOfTx([]));
   };
 
   const addMsgWithValidator = (newMsgType: MsgTypeUrl, msg?: EncodeObject["value"]) => {
@@ -141,11 +143,10 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
       assert(typeof accountOnChain.accountNumber === "number", "accountNumber missing");
       assert(msgGetters.current.length, "form filled incorrectly");
 
-      const msgs = msgGetters.current
-        .filter(({ isMsgValid }) => isMsgValid())
-        .map(({ msg }) => exportMsgToJson(msg));
-
-      if (!msgs.length || msgs.length !== msgTypes.length) return;
+      const validForms = msgGetters.current.filter(({ isMsgValid }) => isMsgValid());
+      if (validForms.length !== msgTypes.length) return;
+      const msgs = validForms.flatMap((getter) => getter.msgs ?? [getter.msg]).map(exportMsgToJson);
+      if (!msgs.length) return;
 
       if (!Number.isSafeInteger(gasLimit) || gasLimit <= 0) {
         setGasLimitError("gas limit must be a positive integer");
@@ -158,6 +159,7 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
       }
 
       setProcessing(true);
+      await validateCancelUnbondingMessages(chain.nodeAddress, msgs, senderAddress);
 
       const tx: DbTransaction = {
         accountNumber: accountOnChain.accountNumber,
@@ -199,11 +201,18 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
             msgType={msgType}
             senderAddress={senderAddress}
             setMsgGetter={(msgGetter) => {
+              const previousCount = msgGetters.current[index]?.msgs?.length ?? 1;
+              const nextCount = msgGetter.msgs?.length ?? 1;
               msgGetters.current = [
                 ...msgGetters.current.slice(0, index),
                 msgGetter,
                 ...msgGetters.current.slice(index + 1),
               ];
+              if (previousCount !== nextCount) {
+                setGasLimit((previous) =>
+                  Math.max(100000, previous + (nextCount - previousCount) * 400000),
+                );
+              }
             }}
             deleteMsg={() => {
               msgGetters.current.splice(index, 1);
@@ -215,7 +224,13 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
                 const newMsgTypes: [MsgTypeUrl, EncodeObject["value"] | undefined][] =
                   oldMsgTypes.slice();
                 newMsgTypes.splice(index, 1);
-                setGasLimit(gasOfTx(newMsgTypes.map(([m]) => m)));
+                setGasLimit(
+                  gasOfTx(
+                    msgGetters.current
+                      .flatMap((getter) => getter.msgs ?? [getter.msg])
+                      .map((message) => message.typeUrl as MsgTypeUrl),
+                  ),
+                );
                 return newMsgTypes;
               });
             }}
@@ -329,6 +344,13 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
                 label="Undelegate"
                 onClick={() => addMsgWithValidator(MsgTypeUrls.Undelegate)}
                 featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Undelegate)}
+              />
+            </li>
+            <li>
+              <Button
+                label="Cancel unbonding"
+                onClick={() => addMsgType(MsgTypeUrls.CancelUnbondingDelegation)}
+                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.CancelUnbondingDelegation)}
               />
             </li>
             <li>

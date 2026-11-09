@@ -5,6 +5,7 @@ import {
 } from "cosmjs-types/cosmos/distribution/v1beta1/tx";
 import { MsgVote } from "cosmjs-types/cosmos/gov/v1beta1/tx";
 import {
+  MsgCancelUnbondingDelegation,
   MsgBeginRedelegate,
   MsgDelegate,
   MsgUndelegate,
@@ -31,6 +32,7 @@ export const MsgTypeUrls = {
   WithdrawDelegatorReward: "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward",
   BeginRedelegate: "/cosmos.staking.v1beta1.MsgBeginRedelegate",
   Delegate: "/cosmos.staking.v1beta1.MsgDelegate",
+  CancelUnbondingDelegation: "/cosmos.staking.v1beta1.MsgCancelUnbondingDelegation",
   Undelegate: "/cosmos.staking.v1beta1.MsgUndelegate",
   CreateVestingAccount: "/cosmos.vesting.v1beta1.MsgCreateVestingAccount",
   Transfer: "/ibc.applications.transfer.v1.MsgTransfer",
@@ -51,6 +53,7 @@ export const MsgTypeUrls = {
 export type MsgTypeUrl = (typeof MsgTypeUrls)[keyof typeof MsgTypeUrls];
 
 export const MsgCodecs = {
+  [MsgTypeUrls.CancelUnbondingDelegation]: MsgCancelUnbondingDelegation,
   [MsgTypeUrls.CreatePeriodicVestingAccount]: MsgCreatePeriodicVestingAccount,
   [MsgTypeUrls.Send]: MsgSend,
   [MsgTypeUrls.Vote]: MsgVote,
@@ -74,6 +77,7 @@ export const MsgCodecs = {
   [MsgTypeUrls.MsgExecGrant]: MsgGrant,
 } as const;
 export const SupportFileFeatureMsgTypes = [
+  MsgTypeUrls.CancelUnbondingDelegation,
   MsgTypeUrls.Send,
   MsgTypeUrls.WithdrawDelegatorReward,
   MsgTypeUrls.CreateVestingAccount,
