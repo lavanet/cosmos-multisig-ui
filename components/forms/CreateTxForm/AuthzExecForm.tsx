@@ -38,9 +38,11 @@ interface Action {
 }
 export default function AuthzExecForm({
   senderAddress,
+  initialActionType,
   onBack,
 }: {
   senderAddress: string;
+  initialActionType?: string;
   accountOnChain: Account;
   onBack: () => void;
 }) {
@@ -98,29 +100,30 @@ export default function AuthzExecForm({
         granter.trim(),
         senderAddress,
       );
-      if (id === requestId.current) setState(data);
+      if (id === requestId.current) {
+        setState(data);
+        if (initialActionType) setActions([newAction(initialActionType, data)]);
+      }
     });
+  const newAction = (typeUrl: string, account = state): Action => ({
+    id: crypto.randomUUID(),
+    typeUrl,
+    amount: "",
+    denom:
+      typeUrl === MsgTypeUrls.Send
+        ? account?.spendable[0]?.denom || chain.denom
+        : account?.bondDenom || chain.denom,
+    recipient: "",
+    validator: "",
+    provider: "",
+    proposal: "",
+    option: "",
+    metadata: "",
+    rewards: [],
+  });
   const add = (typeUrl: string) => {
     reset();
-    setActions((rows) => [
-      ...rows,
-      {
-        id: crypto.randomUUID(),
-        typeUrl,
-        amount: "",
-        denom:
-          typeUrl === MsgTypeUrls.Send
-            ? state?.spendable[0]?.denom || chain.denom
-            : state?.bondDenom || chain.denom,
-        recipient: "",
-        validator: "",
-        provider: "",
-        proposal: "",
-        option: "",
-        metadata: "",
-        rewards: [],
-      },
-    ]);
+    setActions((rows) => [...rows, newAction(typeUrl)]);
   };
   const assemble = (): EncodeObject => {
     if (!state || !actions.length) throw new Error("Load a granter and add an action");
@@ -239,9 +242,12 @@ export default function AuthzExecForm({
   return (
     <section className="authz-form">
       <button type="button" disabled={busy} onClick={onBack}>
-        ← Regular transaction
+        Remove transaction
       </button>
-      <h2>Act on behalf of another wallet</h2>
+      <h3>
+        {guidedActions.find((a) => a.typeUrl === initialActionType)?.label || "Transaction"} — on
+        behalf of another wallet
+      </h3>
       <p>
         The multisig signs and pays fees. Actions affect the granter below using its existing
         permissions.
@@ -315,7 +321,7 @@ export default function AuthzExecForm({
               Loaded at block {state.height}. Changing the granter clears its actions. Permissions
               are checked again before saving and signing.
             </p>
-            <details open>
+            <details>
               <summary>Permissions ({state.permissions.length})</summary>
               {!state.permissions.length && (
                 <p>No grants to this multisig. The granter must grant permission first.</p>
@@ -351,31 +357,17 @@ export default function AuthzExecForm({
                 </div>
               ))}
             </details>
-            <h3>Add an action</h3>
-            <div className="buttons">
-              {guidedActions.map((a) => (
-                <button
-                  key={a.typeUrl}
-                  type="button"
-                  disabled={
-                    actions.length >= MAX_ACTIONS ||
-                    !availablePermission(state.permissions, a.typeUrl, state.time)
-                  }
-                  onClick={() => add(a.typeUrl)}
-                >
-                  {a.label}
-                </button>
-              ))}
-            </div>
-            <p>
-              Unavailable actions need a matching, unexpired grant. All selected actions execute
-              together; if one fails, their state changes roll back. Fees can still be charged.
-            </p>
             {actions.map((a, index) => (
               <article key={a.id}>
                 <h3>
                   {index + 1}. {guidedActions.find((t) => t.typeUrl === a.typeUrl)?.label}
                 </h3>
+                {!availablePermission(state.permissions, a.typeUrl, state.time) && (
+                  <p role="alert">
+                    This wallet has no matching, unexpired permission for this action. Choose
+                    another wallet or ask its owner to grant permission.
+                  </p>
+                )}
                 <div className="buttons">
                   <button
                     type="button"
@@ -577,6 +569,26 @@ export default function AuthzExecForm({
                 )}
               </article>
             ))}
+            <h3>Add another action</h3>
+            <div className="buttons">
+              {guidedActions.map((a) => (
+                <button
+                  key={a.typeUrl}
+                  type="button"
+                  disabled={
+                    actions.length >= MAX_ACTIONS ||
+                    !availablePermission(state.permissions, a.typeUrl, state.time)
+                  }
+                  onClick={() => add(a.typeUrl)}
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
+            <p>
+              Unavailable actions need a matching, unexpired grant. All selected actions execute
+              together; if one fails, their state changes roll back. Fees can still be charged.
+            </p>
             <label>
               Memo
               <input
@@ -589,7 +601,14 @@ export default function AuthzExecForm({
                 }}
               />
             </label>
-            <button type="button" disabled={!actions.length} onClick={prepare}>
+            <button
+              type="button"
+              disabled={
+                !actions.length ||
+                actions.some((a) => !availablePermission(state.permissions, a.typeUrl, state.time))
+              }
+              onClick={prepare}
+            >
               Review and simulate
             </button>
           </>
@@ -621,8 +640,8 @@ export default function AuthzExecForm({
       {error && <p role="alert">{error}</p>}
       <style jsx>{`
         .authz-form {
-          max-width: 850px;
-          width: 90vw;
+          max-width: 100%;
+          width: 100%;
         }
         fieldset {
           border: 0;
@@ -640,18 +659,19 @@ export default function AuthzExecForm({
           padding: 10px;
           margin-top: 7px;
           color: inherit;
-          background: #24202f;
-          border: 1px solid #777;
-          border-radius: 6px;
+          background: #722d6f;
+          border: 2px solid rgba(255, 255, 255, 0.5);
+          border-radius: 9px;
         }
         option {
-          background: #24202f;
+          background: #722d6f;
         }
         button {
           padding: 9px 14px;
-          border: 1px solid #a691bb;
-          border-radius: 6px;
-          background: #54366d;
+          border: none;
+          border-radius: 9px;
+          background: rgba(255, 255, 255, 0.15);
+          font-style: italic;
           color: white;
           cursor: pointer;
         }
@@ -669,7 +689,8 @@ export default function AuthzExecForm({
         .review {
           padding: 18px;
           margin: 20px 0;
-          border: 1px solid #78608b;
+          border: none;
+          background: rgba(255, 255, 255, 0.05);
           border-radius: 10px;
         }
         .permission {

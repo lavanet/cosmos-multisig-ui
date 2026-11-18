@@ -1,5 +1,5 @@
 import AuthzExecForm from "./AuthzExecForm";
-import { execMessages, hasExec, normalizeExec } from "../../../lib/authz/messages";
+import { execMessages, hasExec, normalizeExec, guidedActions } from "../../../lib/authz/messages";
 import { preflightExec } from "../../../lib/authz/preflight";
 import { getMultisigAccount } from "../../../lib/multisigHelpers";
 import { StargateClient } from "@cosmjs/stargate";
@@ -51,7 +51,7 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
     chainsDispatch,
   } = useChains();
 
-  const [authzMode, setAuthzMode] = useState(false);
+  const [authzType, setAuthzType] = useState<string>();
   const [processing, setProcessing] = useState(false);
   const [msgTypes, setMsgTypes] = useState<
     readonly [MsgTypeUrl, EncodeObject["value"] | undefined][]
@@ -110,8 +110,9 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
           return;
         }
 
-        if (!parsedContent.length || parsedContent.length > 100)
-          {throw new Error("Invalid message count");}
+        if (!parsedContent.length || parsedContent.length > 100) {
+          throw new Error("Invalid message count");
+        }
         for (const msg of parsedContent) {
           if (
             !msg ||
@@ -119,19 +120,23 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
             !msg.value ||
             typeof msg.value !== "object" ||
             !SupportFileFeatureMsgTypes.includes(msg.typeUrl)
-          )
-            {throw new Error("Unsupported or malformed message");}
+          ) {
+            throw new Error("Unsupported or malformed message");
+          }
         }
         const existing = msgGetters.current.flatMap((getter) => getter.msgs ?? [getter.msg]);
-        if (hasExec([...existing, ...parsedContent]))
-          {execMessages([...existing, ...parsedContent], senderAddress);}
+        if (hasExec([...existing, ...parsedContent])) {
+          execMessages([...existing, ...parsedContent], senderAddress);
+        }
         for (const msg of parsedContent) {
-          if (validatorMsgsType.includes(msg.typeUrl)) {addMsgWithValidator(msg.typeUrl, msg.value);}
-          else
-            {addMsgType(
+          if (validatorMsgsType.includes(msg.typeUrl)) {
+            addMsgWithValidator(msg.typeUrl, msg.value);
+          } else {
+            addMsgType(
               msg.typeUrl,
               hasExec([msg]) ? normalizeExec(msg, senderAddress).value : msg.value,
-            );}
+            );
+          }
         }
         toastSuccess("Messages added from file");
         setFileError(""); // Clear any previous errors
@@ -185,10 +190,11 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
         try {
           const [pubkey] = await getMultisigAccount(senderAddress, chain.addressPrefix, client);
           const used = await preflightExec(chain.nodeAddress, chain.addressPrefix, tx, pubkey);
-          if (used > gasLimit)
-            {throw new Error(
+          if (used > gasLimit) {
+            throw new Error(
               `Gas limit is too low. Simulation used ${used}. Increase the limit and retry.`,
-            );}
+            );
+          }
         } finally {
           client.disconnect();
         }
@@ -210,304 +216,324 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
     }
   };
 
-  if (authzMode)
-    {return (
-      <AuthzExecForm
-        key={`${chain.chainId}/${senderAddress}`}
-        senderAddress={senderAddress}
-        accountOnChain={accountOnChain}
-        onBack={() => setAuthzMode(false)}
-      />
-    );}
-
   return (
     <StackableContainer
       lessPadding
       divProps={{ style: { width: "min(690px, 90vw)", maxWidth: "690px" } }}
     >
       <h2>Create New Transaction</h2>
-      <Button
-        label="Act on behalf of another wallet"
-        onClick={() => {
-          if (
-            msgTypes.length &&
-            !window.confirm("Discard the current message draft and switch to authz execution?")
-          )
-            {return;}
-          setMsgTypes([]);
-          setMsgKeys([]);
-          msgGetters.current = [];
-          setGasLimit(gasOfTx([]));
-          setAuthzMode(true);
-        }}
-      />
-      {msgTypes.length ? (
-        msgTypes.map(([msgType, msgValue], index) => (
-          <MsgForm
-            msg={msgValue}
-            key={msgKeys[index]}
-            msgType={msgType}
-            senderAddress={senderAddress}
-            setMsgGetter={(msgGetter) => {
-              const previousCount = msgGetters.current[index]?.msgs?.length ?? 1;
-              const nextCount = msgGetter.msgs?.length ?? 1;
-              msgGetters.current = [
-                ...msgGetters.current.slice(0, index),
-                msgGetter,
-                ...msgGetters.current.slice(index + 1),
-              ];
-              if (previousCount !== nextCount) {
-                setGasLimit((previous) =>
-                  Math.max(100000, previous + (nextCount - previousCount) * 400000),
-                );
-              }
-            }}
-            deleteMsg={() => {
-              msgGetters.current.splice(index, 1);
-              setMsgKeys((oldMsgKeys) => [
-                ...oldMsgKeys.slice(0, index),
-                ...oldMsgKeys.slice(index + 1),
-              ]);
-              setMsgTypes((oldMsgTypes) => {
-                const newMsgTypes: [MsgTypeUrl, EncodeObject["value"] | undefined][] =
-                  oldMsgTypes.slice();
-                newMsgTypes.splice(index, 1);
-                setGasLimit(
-                  gasOfTx(
-                    msgGetters.current
-                      .flatMap((getter) => getter.msgs ?? [getter.msg])
-                      .map((message) => message.typeUrl as MsgTypeUrl),
-                  ),
-                );
-                return newMsgTypes;
-              });
-            }}
-          />
-        ))
+      {authzType ? (
+        <AuthzExecForm
+          key={`${chain.chainId}/${senderAddress}`}
+          initialActionType={authzType}
+          senderAddress={senderAddress}
+          accountOnChain={accountOnChain}
+          onBack={() => setAuthzType(undefined)}
+        />
       ) : (
-        <StackableContainer lessMargin lessPadding>
-          <p className="empty-msg-warning">Add at least one message to this transaction</p>
-        </StackableContainer>
+        <>
+          {msgTypes.length ? (
+            msgTypes.map(([msgType, msgValue], index) => (
+              <MsgForm
+                msg={msgValue}
+                key={msgKeys[index]}
+                msgType={msgType}
+                senderAddress={senderAddress}
+                setMsgGetter={(msgGetter) => {
+                  const previousCount = msgGetters.current[index]?.msgs?.length ?? 1;
+                  const nextCount = msgGetter.msgs?.length ?? 1;
+                  msgGetters.current = [
+                    ...msgGetters.current.slice(0, index),
+                    msgGetter,
+                    ...msgGetters.current.slice(index + 1),
+                  ];
+                  if (previousCount !== nextCount) {
+                    setGasLimit((previous) =>
+                      Math.max(100000, previous + (nextCount - previousCount) * 400000),
+                    );
+                  }
+                }}
+                deleteMsg={() => {
+                  msgGetters.current.splice(index, 1);
+                  setMsgKeys((oldMsgKeys) => [
+                    ...oldMsgKeys.slice(0, index),
+                    ...oldMsgKeys.slice(index + 1),
+                  ]);
+                  setMsgTypes((oldMsgTypes) => {
+                    const newMsgTypes: [MsgTypeUrl, EncodeObject["value"] | undefined][] =
+                      oldMsgTypes.slice();
+                    newMsgTypes.splice(index, 1);
+                    setGasLimit(
+                      gasOfTx(
+                        msgGetters.current
+                          .flatMap((getter) => getter.msgs ?? [getter.msg])
+                          .map((message) => message.typeUrl as MsgTypeUrl),
+                      ),
+                    );
+                    return newMsgTypes;
+                  });
+                }}
+              />
+            ))
+          ) : (
+            <StackableContainer lessMargin lessPadding>
+              <p className="empty-msg-warning">Add at least one message to this transaction</p>
+            </StackableContainer>
+          )}
+          <div className="form-item">
+            <Input
+              type="number"
+              label="Gas Limit"
+              name="gas-limit"
+              value={gasLimit}
+              onChange={({ target }) => setGasLimit(Number(target.value))}
+              error={gasLimitError}
+            />
+          </div>
+          <div className="form-item">
+            <Input label="Gas Price" name="gas-price" value={chain.gasPrice} disabled={true} />
+          </div>
+          <div className="form-item">
+            <Input
+              type="number"
+              label="Sequence"
+              name="sequence"
+              value={sequence}
+              onChange={({ target }) => setSequence(Number(target.value))}
+              error={sequenceError}
+            />
+          </div>
+          <div className="form-item">
+            <Input
+              label="Memo"
+              name="memo"
+              value={memo}
+              onChange={({ target }) => setMemo(target.value)}
+            />
+          </div>
+        </>
       )}
-      <div className="form-item">
-        <Input
-          type="number"
-          label="Gas Limit"
-          name="gas-limit"
-          value={gasLimit}
-          onChange={({ target }) => setGasLimit(Number(target.value))}
-          error={gasLimitError}
-        />
-      </div>
-      <div className="form-item">
-        <Input label="Gas Price" name="gas-price" value={chain.gasPrice} disabled={true} />
-      </div>
-      <div className="form-item">
-        <Input
-          type="number"
-          label="Sequence"
-          name="sequence"
-          value={sequence}
-          onChange={({ target }) => setSequence(Number(target.value))}
-          error={sequenceError}
-        />
-      </div>
-      <div className="form-item">
-        <Input
-          label="Memo"
-          name="memo"
-          value={memo}
-          onChange={({ target }) => setMemo(target.value)}
-        />
-      </div>
       <h4 className="mx-0 my-5 block font-bold">Add New Msg</h4>
       <div className="btn-cluster-grid">
-        <div className="btn-cluster">
-          <label>Bank</label>
+        <fieldset className="transaction-modules" disabled={!!authzType}>
+          <div className="btn-cluster">
+            <label>Bank</label>
+            <ul>
+              <li>
+                <Button
+                  label="Send"
+                  onClick={() => addMsgType(MsgTypeUrls.Send)}
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Send)}
+                />
+              </li>
+            </ul>
+          </div>
+          <div className="btn-cluster">
+            <label>IBC</label>
+            <ul>
+              <li>
+                <Button
+                  label="Transfer"
+                  onClick={() => addMsgType(MsgTypeUrls.Transfer)}
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Transfer)}
+                />
+              </li>
+            </ul>
+          </div>
+          <div className="btn-cluster">
+            <label>Vesting</label>
+            <ul>
+              <li>
+                <Button
+                  label="CreateVestingAccount"
+                  onClick={() => addMsgType(MsgTypeUrls.CreateVestingAccount)}
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.CreateVestingAccount)}
+                />
+              </li>
+              <li>
+                <Button
+                  label="MsgCreatePeriodicVestingAccount"
+                  onClick={() => addMsgType(MsgTypeUrls.CreatePeriodicVestingAccount)}
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.CreatePeriodicVestingAccount)}
+                />
+              </li>
+            </ul>
+          </div>
+          <div className="btn-cluster">
+            <label>Governance</label>
+            <ul>
+              <li>
+                <Button
+                  label="Vote"
+                  onClick={() => addMsgType(MsgTypeUrls.Vote)}
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Vote)}
+                />
+              </li>
+            </ul>
+          </div>
+          <div className="btn-cluster">
+            <label>Staking</label>
+            <ul>
+              <li>
+                <Button
+                  label="Delegate"
+                  onClick={() => addMsgWithValidator(MsgTypeUrls.Delegate)}
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Delegate)}
+                />
+              </li>
+              <li>
+                <Button
+                  label="Undelegate"
+                  onClick={() => addMsgWithValidator(MsgTypeUrls.Undelegate)}
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Undelegate)}
+                />
+              </li>
+              <li>
+                <Button
+                  label="Cancel unbonding"
+                  onClick={() => addMsgType(MsgTypeUrls.CancelUnbondingDelegation)}
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.CancelUnbondingDelegation)}
+                />
+              </li>
+              <li>
+                <Button
+                  label="BeginRedelegate"
+                  onClick={() => addMsgWithValidator(MsgTypeUrls.BeginRedelegate)}
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.BeginRedelegate)}
+                />
+              </li>
+            </ul>
+            <ul>
+              <li>
+                <Button
+                  label="WithdrawDelegatorReward"
+                  onClick={() => addMsgWithValidator(MsgTypeUrls.WithdrawDelegatorReward)}
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.WithdrawDelegatorReward)}
+                />
+              </li>
+              <li>
+                <Button
+                  label="SetWithdrawAddress"
+                  onClick={() => addMsgType(MsgTypeUrls.SetWithdrawAddress)}
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.SetWithdrawAddress)}
+                />
+              </li>
+            </ul>
+          </div>
+          <div className="btn-cluster">
+            <label>Dualstaking</label>
+            <ul>
+              <li>
+                <Button
+                  label="Delegate"
+                  onClick={() => addMsgWithValidator(MsgTypeUrls.DualDelegate)}
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.DualDelegate)}
+                />
+              </li>
+              <li>
+                <Button
+                  label="Unbond"
+                  onClick={() => addMsgWithValidator(MsgTypeUrls.DualUnbond)}
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.DualUnbond)}
+                />
+              </li>
+              <li>
+                <Button
+                  label="Redelegate"
+                  onClick={() => addMsgType(MsgTypeUrls.DualRedelegate)}
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.DualRedelegate)}
+                />
+              </li>
+              <li>
+                <Button
+                  label="ClaimRewards"
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.DualRedelegate)}
+                  onClick={() => addMsgType(MsgTypeUrls.DualClaimRewards)}
+                />
+              </li>
+            </ul>
+          </div>
+          <div className="btn-cluster">
+            <label>CosmWasm</label>
+            <ul>
+              <li>
+                <Button
+                  label="InstantiateContract"
+                  onClick={() => addMsgType(MsgTypeUrls.Instantiate)}
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Instantiate)}
+                />
+              </li>
+              <li>
+                <Button
+                  label="InstantiateContract2"
+                  onClick={() => addMsgType(MsgTypeUrls.Instantiate2)}
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Instantiate2)}
+                />
+              </li>
+              <li>
+                <Button
+                  label="ExecuteContract"
+                  onClick={() => addMsgType(MsgTypeUrls.Execute)}
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Execute)}
+                />
+              </li>
+              <li>
+                <Button
+                  label="MigrateContract"
+                  onClick={() => addMsgType(MsgTypeUrls.Migrate)}
+                  featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Migrate)}
+                />
+              </li>
+            </ul>
+          </div>
+        </fieldset>
+        <div className="btn-cluster" role="group" aria-label="On behalf of another wallet">
+          <label>On behalf of another wallet</label>
           <ul>
-            <li>
-              <Button
-                label="Send"
-                onClick={() => addMsgType(MsgTypeUrls.Send)}
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Send)}
-              />
-            </li>
-          </ul>
-        </div>
-        <div className="btn-cluster">
-          <label>IBC</label>
-          <ul>
-            <li>
-              <Button
-                label="Transfer"
-                onClick={() => addMsgType(MsgTypeUrls.Transfer)}
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Transfer)}
-              />
-            </li>
-          </ul>
-        </div>
-        <div className="btn-cluster">
-          <label>Vesting</label>
-          <ul>
-            <li>
-              <Button
-                label="CreateVestingAccount"
-                onClick={() => addMsgType(MsgTypeUrls.CreateVestingAccount)}
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.CreateVestingAccount)}
-              />
-            </li>
-            <li>
-              <Button
-                label="MsgCreatePeriodicVestingAccount"
-                onClick={() => addMsgType(MsgTypeUrls.CreatePeriodicVestingAccount)}
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.CreatePeriodicVestingAccount)}
-              />
-            </li>
-          </ul>
-        </div>
-        <div className="btn-cluster">
-          <label>Governance</label>
-          <ul>
-            <li>
-              <Button
-                label="Vote"
-                onClick={() => addMsgType(MsgTypeUrls.Vote)}
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Vote)}
-              />
-            </li>
-          </ul>
-        </div>
-        <div className="btn-cluster">
-          <label>Staking</label>
-          <ul>
-            <li>
-              <Button
-                label="Delegate"
-                onClick={() => addMsgWithValidator(MsgTypeUrls.Delegate)}
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Delegate)}
-              />
-            </li>
-            <li>
-              <Button
-                label="Undelegate"
-                onClick={() => addMsgWithValidator(MsgTypeUrls.Undelegate)}
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Undelegate)}
-              />
-            </li>
-            <li>
-              <Button
-                label="Cancel unbonding"
-                onClick={() => addMsgType(MsgTypeUrls.CancelUnbondingDelegation)}
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.CancelUnbondingDelegation)}
-              />
-            </li>
-            <li>
-              <Button
-                label="BeginRedelegate"
-                onClick={() => addMsgWithValidator(MsgTypeUrls.BeginRedelegate)}
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.BeginRedelegate)}
-              />
-            </li>
-          </ul>
-          <ul>
-            <li>
-              <Button
-                label="WithdrawDelegatorReward"
-                onClick={() => addMsgWithValidator(MsgTypeUrls.WithdrawDelegatorReward)}
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.WithdrawDelegatorReward)}
-              />
-            </li>
-            <li>
-              <Button
-                label="SetWithdrawAddress"
-                onClick={() => addMsgType(MsgTypeUrls.SetWithdrawAddress)}
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.SetWithdrawAddress)}
-              />
-            </li>
-          </ul>
-        </div>
-        <div className="btn-cluster">
-          <label>Dualstaking</label>
-          <ul>
-            <li>
-              <Button
-                label="Delegate"
-                onClick={() => addMsgWithValidator(MsgTypeUrls.DualDelegate)}
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.DualDelegate)}
-              />
-            </li>
-            <li>
-              <Button
-                label="Unbond"
-                onClick={() => addMsgWithValidator(MsgTypeUrls.DualUnbond)}
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.DualUnbond)}
-              />
-            </li>
-            <li>
-              <Button
-                label="Redelegate"
-                onClick={() => addMsgType(MsgTypeUrls.DualRedelegate)}
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.DualRedelegate)}
-              />
-            </li>
-            <li>
-              <Button
-                label="ClaimRewards"
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.DualRedelegate)}
-                onClick={() => addMsgType(MsgTypeUrls.DualClaimRewards)}
-              />
-            </li>
-          </ul>
-        </div>
-        <div className="btn-cluster">
-          <label>CosmWasm</label>
-          <ul>
-            <li>
-              <Button
-                label="InstantiateContract"
-                onClick={() => addMsgType(MsgTypeUrls.Instantiate)}
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Instantiate)}
-              />
-            </li>
-            <li>
-              <Button
-                label="InstantiateContract2"
-                onClick={() => addMsgType(MsgTypeUrls.Instantiate2)}
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Instantiate2)}
-              />
-            </li>
-            <li>
-              <Button
-                label="ExecuteContract"
-                onClick={() => addMsgType(MsgTypeUrls.Execute)}
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Execute)}
-              />
-            </li>
-            <li>
-              <Button
-                label="MigrateContract"
-                onClick={() => addMsgType(MsgTypeUrls.Migrate)}
-                featureLabel={resolveTxFileSupportLabel(MsgTypeUrls.Migrate)}
-              />
-            </li>
+            {guidedActions.map((action) => (
+              <li key={action.typeUrl}>
+                <Button
+                  label={action.label}
+                  disabled={!!authzType}
+                  onClick={() => {
+                    if (
+                      msgTypes.length &&
+                      !window.confirm(
+                        "Discard the current message draft and create a transaction on behalf of another wallet?",
+                      )
+                    )
+                      {return;}
+                    setMsgTypes([]);
+                    setMsgKeys([]);
+                    msgGetters.current = [];
+                    setGasLimit(gasOfTx([]));
+                    setAuthzType(action.typeUrl);
+                  }}
+                />
+              </li>
+            ))}
           </ul>
         </div>
       </div>
-      <StackableContainer lessMargin lessPadding>
-        <Input
-          type="file"
-          label="Upload messages from file"
-          name="trx-file"
-          onChange={handleFileMessages}
-        />
-        {fileError && <p className="multisig-error">{fileError}</p>}
-      </StackableContainer>
-      <Button
-        label="Create Transaction"
-        onClick={createTx}
-        disabled={!msgTypes.length}
-        loading={processing}
-      />
+      {!authzType && (
+        <>
+          <StackableContainer lessMargin lessPadding>
+            <Input
+              type="file"
+              label="Upload messages from file"
+              name="trx-file"
+              onChange={handleFileMessages}
+            />
+            {fileError && <p className="multisig-error">{fileError}</p>}
+          </StackableContainer>
+          <Button
+            label="Create Transaction"
+            onClick={createTx}
+            disabled={!msgTypes.length}
+            loading={processing}
+          />
+        </>
+      )}
       <style jsx>{`
         p {
           margin-top: 15px;
@@ -525,6 +551,9 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
           color: red;
           font-size: 16px;
           text-align: center;
+        }
+        .transaction-modules {
+          display: contents;
         }
         .btn-cluster-grid {
           display: flex;

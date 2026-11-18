@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom";
 import { TextEncoder, TextDecoder } from "util";
 Object.assign(global, { TextEncoder, TextDecoder });
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { StrictMode } from "react";
 import { toBech32 } from "@cosmjs/encoding";
 import {
@@ -13,13 +13,18 @@ import {
 import { NextRouter } from "next/router";
 import { RouterContext } from "next/dist/shared/lib/router-context";
 import AuthzExecForm from "./AuthzExecForm";
+import CreateTxForm from ".";
 import { AuthzAccount, loadAuthzAccount } from "../../../lib/authz/queries";
 import { preflightExec } from "../../../lib/authz/preflight";
 import { getMultisigAccount } from "../../../lib/multisigHelpers";
 import { requestJson } from "../../../lib/request";
 import { MsgTypeUrls } from "../../../types/txMsg";
+// Ordinary message forms have separate tests; this suite exercises the real parent and authz form.
+jest.mock("./MsgForm", () => ({ __esModule: true, default: () => null }));
 jest.mock("../../../context/ChainsContext", () => ({
   useChains: () => ({
+    validatorState: { validators: [] },
+    chainsDispatch: jest.fn(),
     chain: {
       chainId: "lava-test",
       addressPrefix: "lava@",
@@ -97,11 +102,12 @@ beforeEach(async () => {
     .mockResolvedValue([pubkey, { address: grantee, accountNumber: 17, sequence: 9, pubkey }]);
   jest.mocked(requestJson).mockResolvedValue({ transactionID: "0x123" });
 });
-async function mount() {
+async function mount(initialActionType?: string) {
   render(
     <StrictMode>
       <RouterContext.Provider value={{ push: jest.fn() } as unknown as NextRouter}>
         <AuthzExecForm
+          initialActionType={initialActionType}
           senderAddress={grantee}
           accountOnChain={{ address: grantee, accountNumber: 17, sequence: 9, pubkey: null }}
           onBack={jest.fn()}
@@ -158,4 +164,44 @@ it("resets actions when granter changes and disables unavailable actions", async
   fireEvent.change(screen.getByLabelText("Granter wallet"), { target: { value: grantee } });
   expect(screen.queryByLabelText("Recipient 1")).toBeNull();
   expect(screen.queryByRole("button", { name: "Review and simulate" })).toBeNull();
+});
+
+it("opens the selected authz action from the existing transaction modules on the same screen", async () => {
+  render(
+    <RouterContext.Provider value={{ push: jest.fn() } as unknown as NextRouter}>
+      <CreateTxForm
+        senderAddress={grantee}
+        accountOnChain={{ address: grantee, accountNumber: 17, sequence: 9, pubkey: null }}
+      />
+    </RouterContext.Provider>,
+  );
+  const category = screen.getByRole("group", { name: "On behalf of another wallet" });
+  expect(screen.queryByRole("button", { name: "Act on behalf of another wallet" })).toBeNull();
+  fireEvent.click(within(category).getByRole("button", { name: "Transfer tokens" }));
+  expect(screen.getByRole("heading", { name: "Create New Transaction" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "Transfer tokens — on behalf of another wallet" }),
+  ).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Granter wallet"), { target: { value: granter } });
+  fireEvent.click(screen.getByRole("button", { name: "Load permissions and balances" }));
+  await screen.findByLabelText("Recipient 1");
+  expect(screen.getByLabelText("Amount 1")).toBeInTheDocument();
+  expect(screen.getByText("Permissions (2)").closest("details")).not.toHaveAttribute("open");
+  fireEvent.click(screen.getByRole("button", { name: "Remove transaction" }));
+  expect(screen.queryByLabelText("Granter wallet")).toBeNull();
+  expect(within(category).getByRole("button", { name: "Transfer tokens" })).not.toBeDisabled();
+});
+it("preserves the selected action when a different granter is loaded", async () => {
+  await mount(MsgTypeUrls.Send);
+  fireEvent.change(screen.getByLabelText("Recipient 1"), { target: { value: grantee } });
+  fireEvent.change(screen.getByLabelText("Granter wallet"), { target: { value: grantee } });
+  expect(screen.queryByLabelText("Recipient 1")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Load permissions and balances" }));
+  expect(await screen.findByLabelText("Recipient 1")).toHaveValue("");
+});
+it("shows the chosen action but blocks review if the wallet lacks its grant", async () => {
+  await mount(MsgTypeUrls.Undelegate);
+  expect(screen.getByRole("alert")).toHaveTextContent("no matching, unexpired permission");
+  expect(screen.getByRole("button", { name: "Review and simulate" })).toBeDisabled();
+  expect(requestJson).not.toHaveBeenCalled();
 });

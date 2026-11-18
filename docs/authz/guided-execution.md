@@ -1,10 +1,10 @@
 # Execute grants with a multisig
 
-Open **New Transaction → Act on behalf of another wallet**. The multisig is the **grantee**: its members sign, its account sequence is used, and it pays transaction fees. The selected **granter** owns the tokens/delegations and must already have authorized the multisig.
+Open **New Transaction** and choose an action from **On behalf of another wallet**, alongside the other transaction modules. The multisig is the **grantee**: its members sign, its account sequence is used, and it pays transaction fees. The selected **granter** owns the tokens/delegations and must already have authorized the multisig.
 
-1. Enter the granter address, or use **Find wallets with grants**.
+1. Choose the transaction type, then enter the granter address in the same inline form, or use **Find wallets with grants**.
 2. Load permissions and balances. The screen shows grant expiration, remaining allowance, allowed recipients and validator restrictions. Unsupported and expired grants cannot enable actions.
-3. Add one or more actions, in execution order. Remove or move actions up as needed.
+3. Complete the selected action. Use **Add another action** to build a batch in execution order; remove or move actions up as needed.
 4. **Review and simulate** checks fresh chain state and simulates the entire batch. Review the granter, recipients, validators/providers, amounts, vote, gas and multisig fee.
 5. **Create unsigned proposal** saves the reviewed transaction. Share the proposal with the multisig members. Saving does not sign or broadcast it.
 
