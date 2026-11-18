@@ -75,8 +75,9 @@ suite("private Lava chain authz integration", () => {
     grantee = pubkeyToAddress(pubkey, "lava@");
     granter = accounts[3].address;
     recipient = accounts[0].address;
-    for (const address of [grantee, granter, recipient])
-      {cli("add-genesis-account", address, "1000000000000ulava,1000000utest");}
+    for (const address of [grantee, granter, recipient]) {
+      cli("add-genesis-account", address, "1000000000000ulava,1000000utest");
+    }
     const path = join(home, "config/genesis.json");
     const genesis = JSON.parse(readFileSync(path, "utf8"));
     const types = [
@@ -86,6 +87,11 @@ suite("private Lava chain authz integration", () => {
       MsgTypeUrls.WithdrawDelegatorReward,
       MsgTypeUrls.Undelegate,
       MsgTypeUrls.DualUnbond,
+      MsgTypeUrls.Delegate,
+      MsgTypeUrls.BeginRedelegate,
+      MsgTypeUrls.DualDelegate,
+      MsgTypeUrls.DualRedelegate,
+      MsgTypeUrls.DualClaimRewards,
     ];
     genesis.app_state.authz.authorization = types.map((msg) => ({
       granter,
@@ -161,8 +167,8 @@ suite("private Lava chain authz integration", () => {
       rpc,
       chainId,
       async (queryRpc) =>
-        (await new StakingQuery(queryRpc).Validators({ status: "BOND_STATUS_BONDED" })).validators[0]
-          .operatorAddress,
+        (await new StakingQuery(queryRpc).Validators({ status: "BOND_STATUS_BONDED" }))
+          .validators[0].operatorAddress,
     );
     granterClient = await SigningStargateClient.connectWithSigner(rpc, wallets[3], {
       registry: new Registry([
@@ -319,6 +325,56 @@ suite("private Lava chain authz integration", () => {
     expect((await execute(tx)).code).toBe(0);
     const after = await loadAuthzAccount(rpc, chainId, "lava@", granter, grantee);
     expect(after.delegations.find((d) => d.validator === validator)?.amount).toBe("999998000");
+  }, 45000);
+  it("executes validator delegation and all-provider reward claims through the multisig", async () => {
+    const before = await loadAuthzAccount(rpc, chainId, "lava@", granter, grantee);
+    const tx = await proposal([
+      {
+        typeUrl: MsgTypeUrls.Delegate,
+        value: {
+          delegatorAddress: granter,
+          validatorAddress: validator,
+          amount: { denom: "ulava", amount: "1234" },
+        },
+      },
+      { typeUrl: MsgTypeUrls.DualClaimRewards, value: { creator: granter, provider: "" } },
+    ]);
+    expect((await execute(tx)).code).toBe(0);
+    const after = await loadAuthzAccount(rpc, chainId, "lava@", granter, grantee);
+    expect(BigInt(after.delegations.find((d) => d.validator === validator)!.amount)).toBe(
+      BigInt(before.delegations.find((d) => d.validator === validator)!.amount) + 1234n,
+    );
+  }, 45000);
+  it("rejects unregistered dualstaking destination providers during simulation", async () => {
+    await expect(
+      proposal([
+        {
+          typeUrl: MsgTypeUrls.DualDelegate,
+          value: {
+            creator: granter,
+            validator,
+            provider: recipient,
+            chainID: "*",
+            amount: { denom: "ulava", amount: "1" },
+          },
+        },
+      ]),
+    ).rejects.toThrow();
+    await expect(
+      proposal([
+        {
+          typeUrl: MsgTypeUrls.DualRedelegate,
+          value: {
+            creator: granter,
+            fromProvider: "empty_provider",
+            toProvider: recipient,
+            fromChainID: "*",
+            toChainID: "*",
+            amount: { denom: "ulava", amount: "1" },
+          },
+        },
+      ]),
+    ).rejects.toThrow();
   }, 45000);
   it("rejects a previously prepared transfer after its grant is revoked", async () => {
     const tx = await proposal([

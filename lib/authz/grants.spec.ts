@@ -127,3 +127,134 @@ it("shares the validator budget across staking and dualstaking actions", () => {
   expect(() => validateResources(state, [dual])).not.toThrow();
   expect(() => validateResources(state, [dual, dual])).toThrow(/provider allocation/);
 });
+it("shares bank funds across sends and both delegation types while allowing locked tokens to stake", () => {
+  const account: AuthzAccount = {
+    ...state,
+    permissions: [
+      ...state.permissions,
+      ...[MsgTypeUrls.Delegate, MsgTypeUrls.DualDelegate].map((typeUrl) => ({
+        typeUrl,
+        kind: "generic" as const,
+      })),
+    ],
+    stakingBalance: [{ denom: "ulava", amount: "20" }],
+  };
+  const delegate = {
+    typeUrl: MsgTypeUrls.Delegate,
+    value: {
+      delegatorAddress: "granter",
+      validatorAddress: "validator",
+      amount: { denom: "ulava", amount: "15" },
+    },
+  };
+  const dual = {
+    typeUrl: MsgTypeUrls.DualDelegate,
+    value: {
+      creator: "granter",
+      validator: "validator",
+      provider: "provider",
+      amount: { denom: "ulava", amount: "6" },
+    },
+  };
+  expect(() => validateResources(account, [delegate])).not.toThrow();
+  expect(() => validateResources(account, [delegate, send("5")])).not.toThrow();
+  expect(() => validateResources(account, [send("6"), delegate])).toThrow(/bank balance/);
+  expect(() => validateResources(account, [delegate, dual])).toThrow(/bank balance/);
+  expect(() => validateResources(account, [send("11")])).toThrow(/spendable/);
+  expect(() =>
+    validateResources(account, [
+      { ...delegate, value: { ...delegate.value, amount: { denom: "other", amount: "1" } } },
+    ]),
+  ).toThrow(/denomination/);
+});
+it("shares existing stake and provider allocations between redelegation and unbonding", () => {
+  const account: AuthzAccount = {
+    ...state,
+    permissions: [
+      ...state.permissions,
+      ...[MsgTypeUrls.BeginRedelegate, MsgTypeUrls.DualRedelegate].map((typeUrl) => ({
+        typeUrl,
+        kind: "generic" as const,
+      })),
+    ],
+  };
+  const redelegate = {
+    typeUrl: MsgTypeUrls.BeginRedelegate,
+    value: {
+      delegatorAddress: "granter",
+      validatorSrcAddress: "validator",
+      validatorDstAddress: "destination",
+      amount: { denom: "ulava", amount: "7" },
+    },
+  };
+  const dual = {
+    typeUrl: MsgTypeUrls.DualRedelegate,
+    value: {
+      creator: "granter",
+      fromProvider: "provider",
+      toProvider: "destination",
+      amount: { denom: "ulava", amount: "3" },
+    },
+  };
+  expect(() => validateResources(account, [redelegate, dual])).not.toThrow();
+  expect(() =>
+    validateResources(account, [
+      redelegate,
+      {
+        typeUrl: MsgTypeUrls.Undelegate,
+        value: {
+          delegatorAddress: "granter",
+          validatorAddress: "validator",
+          amount: { denom: "ulava", amount: "4" },
+        },
+      },
+    ]),
+  ).toThrow(/validator delegation/);
+  expect(() =>
+    validateResources(account, [
+      dual,
+      {
+        typeUrl: MsgTypeUrls.DualUnbond,
+        value: {
+          creator: "granter",
+          validator: "validator",
+          provider: "provider",
+          amount: { denom: "ulava", amount: "2" },
+        },
+      },
+    ]),
+  ).toThrow(/provider allocation/);
+  expect(() =>
+    validateResources(account, [
+      { ...redelegate, value: { ...redelegate.value, validatorDstAddress: "validator" } },
+    ]),
+  ).toThrow(/different/);
+  expect(() =>
+    validateResources(account, [{ ...dual, value: { ...dual.value, toProvider: "provider" } }]),
+  ).toThrow(/different/);
+});
+it.each([MsgTypeUrls.Delegate, MsgTypeUrls.BeginRedelegate])(
+  "checks destination validator restrictions for %s",
+  (typeUrl) => {
+    const msg = {
+      typeUrl,
+      value: {
+        validatorAddress: typeUrl === MsgTypeUrls.Delegate ? "target" : undefined,
+        validatorSrcAddress: "source",
+        validatorDstAddress: "target",
+        amount: { denom: "ulava", amount: "2" },
+      },
+    };
+    const grant: Permission = {
+      typeUrl,
+      kind: "stake",
+      allow: ["target"],
+      limits: [{ denom: "ulava", amount: "3" }],
+    };
+    expect(() => validatePermissions([grant], [msg], 0)).not.toThrow();
+    expect(() => validatePermissions([grant], [msg, msg], 0)).toThrow(/allowance/);
+    expect(() => validatePermissions([{ ...grant, allow: ["source"] }], [msg], 0)).toThrow(
+      /not allowed/,
+    );
+  },
+);

@@ -20,6 +20,8 @@ export interface AuthzAccount {
   time: number;
   permissions: Permission[];
   spendable: Coin[];
+  /** Bank balance available for staking, including vesting tokens; simulation enforces account restrictions. */
+  stakingBalance?: Coin[];
   bondDenom: string;
   delegations: { validator: string; amount: string }[];
   providers: { provider: string; amount: string }[];
@@ -128,43 +130,60 @@ export async function loadAuthzAccount(
     });
     const permissions = grants.map(decodeGrant);
     const can = (type: string) => !!availablePermission(permissions, type, time);
-    const needsStake = can(MsgTypeUrls.Undelegate) || can(MsgTypeUrls.DualUnbond);
-    const [spendable, params, delegations, rewardResponse, withdrawal, providers, proposals] =
-      await Promise.all([
-        can(MsgTypeUrls.Send)
-          ? collectPages(async (pagination) => {
-              const r = await bank.SpendableBalances({ address: granter, pagination });
-              return { items: r.balances, nextKey: r.pagination?.nextKey };
-            })
-          : [],
-        staking.Params({}),
-        needsStake
-          ? collectPages(async (pagination) => {
-              const r = await staking.DelegatorDelegations({ delegatorAddr: granter, pagination });
-              return { items: r.delegationResponses, nextKey: r.pagination?.nextKey };
-            })
-          : [],
-        can(MsgTypeUrls.WithdrawDelegatorReward)
-          ? distribution.DelegationTotalRewards({ delegatorAddress: granter })
-          : undefined,
-        can(MsgTypeUrls.WithdrawDelegatorReward)
-          ? distribution.DelegatorWithdrawAddress({ delegatorAddress: granter })
-          : undefined,
-        can(MsgTypeUrls.DualUnbond)
-          ? new DualQuery(rpc).delegatorProviders({ delegator: granter, withPending: false })
-          : undefined,
-        can(MsgTypeUrls.Vote) || can(VOTE_V1)
-          ? collectPages(async (pagination) => {
-              const r = await new GovQuery(rpc).Proposals({
-                proposalStatus: 2,
-                voter: "",
-                depositor: "",
-                pagination,
-              });
-              return { items: r.proposals, nextKey: r.pagination?.nextKey };
-            })
-          : [],
-      ]);
+    const needsStake =
+      can(MsgTypeUrls.Undelegate) ||
+      can(MsgTypeUrls.DualUnbond) ||
+      can(MsgTypeUrls.BeginRedelegate);
+    const [
+      spendable,
+      params,
+      delegations,
+      rewardResponse,
+      withdrawal,
+      providers,
+      proposals,
+      stakingBalance,
+    ] = await Promise.all([
+      can(MsgTypeUrls.Send)
+        ? collectPages(async (pagination) => {
+            const r = await bank.SpendableBalances({ address: granter, pagination });
+            return { items: r.balances, nextKey: r.pagination?.nextKey };
+          })
+        : [],
+      staking.Params({}),
+      needsStake
+        ? collectPages(async (pagination) => {
+            const r = await staking.DelegatorDelegations({ delegatorAddr: granter, pagination });
+            return { items: r.delegationResponses, nextKey: r.pagination?.nextKey };
+          })
+        : [],
+      can(MsgTypeUrls.WithdrawDelegatorReward)
+        ? distribution.DelegationTotalRewards({ delegatorAddress: granter })
+        : undefined,
+      can(MsgTypeUrls.WithdrawDelegatorReward)
+        ? distribution.DelegatorWithdrawAddress({ delegatorAddress: granter })
+        : undefined,
+      can(MsgTypeUrls.DualUnbond) || can(MsgTypeUrls.DualRedelegate)
+        ? new DualQuery(rpc).delegatorProviders({ delegator: granter, withPending: false })
+        : undefined,
+      can(MsgTypeUrls.Vote) || can(VOTE_V1)
+        ? collectPages(async (pagination) => {
+            const r = await new GovQuery(rpc).Proposals({
+              proposalStatus: 2,
+              voter: "",
+              depositor: "",
+              pagination,
+            });
+            return { items: r.proposals, nextKey: r.pagination?.nextKey };
+          })
+        : [],
+      can(MsgTypeUrls.Delegate) || can(MsgTypeUrls.DualDelegate)
+        ? collectPages(async (pagination) => {
+            const r = await bank.AllBalances({ address: granter, pagination });
+            return { items: r.balances, nextKey: r.pagination?.nextKey };
+          })
+        : undefined,
+    ]);
     return {
       granter,
       grantee,
@@ -172,6 +191,7 @@ export async function loadAuthzAccount(
       time,
       permissions,
       spendable,
+      stakingBalance,
       bondDenom: params.params?.bondDenom || "",
       delegations: delegations
         .filter((d) => d.delegation && d.balance)

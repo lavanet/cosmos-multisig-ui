@@ -31,6 +31,7 @@ interface Action {
   recipient: string;
   validator: string;
   provider: string;
+  destination: string;
   proposal: string;
   option: string;
   metadata: string;
@@ -46,7 +47,10 @@ export default function AuthzExecForm({
   accountOnChain: Account;
   onBack: () => void;
 }) {
-  const { chain } = useChains();
+  const {
+    chain,
+    validatorState: { validators },
+  } = useChains();
   const router = useRouter();
   const [granter, setGranter] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -148,6 +152,7 @@ export default function AuthzExecForm({
     recipient: "",
     validator: "",
     provider: "",
+    destination: "",
     proposal: "",
     option: "",
     metadata: "",
@@ -181,6 +186,9 @@ export default function AuthzExecForm({
           },
         ];
       }
+      if (a.typeUrl === MsgTypeUrls.DualClaimRewards) {
+        return [{ typeUrl: a.typeUrl, value: { creator: actor, provider: a.provider.trim() } }];
+      }
       const amount = {
         denom: a.denom,
         amount: Decimal.fromUserInput(a.amount, units(a.denom).exponent).atomics,
@@ -193,7 +201,35 @@ export default function AuthzExecForm({
           },
         ];
       }
-      if (a.typeUrl === MsgTypeUrls.Undelegate) {
+      if (a.typeUrl === MsgTypeUrls.BeginRedelegate) {
+        return [
+          {
+            typeUrl: a.typeUrl,
+            value: {
+              delegatorAddress: actor,
+              validatorSrcAddress: a.validator,
+              validatorDstAddress: a.destination,
+              amount,
+            },
+          },
+        ];
+      }
+      if (a.typeUrl === MsgTypeUrls.DualRedelegate) {
+        return [
+          {
+            typeUrl: a.typeUrl,
+            value: {
+              creator: actor,
+              fromProvider: a.provider,
+              toProvider: a.destination.trim(),
+              fromChainID: "*",
+              toChainID: "*",
+              amount,
+            },
+          },
+        ];
+      }
+      if (a.typeUrl === MsgTypeUrls.Undelegate || a.typeUrl === MsgTypeUrls.Delegate) {
         return [
           {
             typeUrl: a.typeUrl,
@@ -201,12 +237,15 @@ export default function AuthzExecForm({
           },
         ];
       }
+      if (a.typeUrl !== MsgTypeUrls.DualDelegate && a.typeUrl !== MsgTypeUrls.DualUnbond) {
+        throw new Error("Unsupported guided action");
+      }
       return [
         {
           typeUrl: a.typeUrl,
           value: {
             creator: actor,
-            provider: a.provider,
+            provider: a.provider.trim(),
             validator: a.validator,
             chainID: "*",
             amount,
@@ -448,7 +487,13 @@ export default function AuthzExecForm({
                     )}
                   </>
                 )}
-                {(a.typeUrl === MsgTypeUrls.Undelegate || a.typeUrl === MsgTypeUrls.DualUnbond) && (
+                {(
+                  [
+                    MsgTypeUrls.Undelegate,
+                    MsgTypeUrls.DualUnbond,
+                    MsgTypeUrls.BeginRedelegate,
+                  ] as string[]
+                ).includes(a.typeUrl) && (
                   <>
                     <label>
                       Validator delegation
@@ -465,10 +510,12 @@ export default function AuthzExecForm({
                         ))}
                       </select>
                     </label>
-                    <p>
-                      Unbonding starts the chain’s waiting period; it does not transfer tokens
-                      immediately. Vesting locks remain in effect.
-                    </p>
+                    {a.typeUrl !== MsgTypeUrls.BeginRedelegate && (
+                      <p>
+                        Unbonding starts the chain’s waiting period; it does not transfer tokens
+                        immediately. Vesting locks remain in effect.
+                      </p>
+                    )}
                     {a.typeUrl === MsgTypeUrls.Undelegate && (
                       <p>
                         On Lava this may also reduce provider allocations through the staking hooks.
@@ -476,7 +523,8 @@ export default function AuthzExecForm({
                     )}
                   </>
                 )}
-                {a.typeUrl === MsgTypeUrls.DualUnbond && (
+                {(a.typeUrl === MsgTypeUrls.DualUnbond ||
+                  a.typeUrl === MsgTypeUrls.DualRedelegate) && (
                   <label>
                     Provider allocation
                     <select
@@ -493,9 +541,129 @@ export default function AuthzExecForm({
                     </select>
                   </label>
                 )}
-                {[MsgTypeUrls.Send, MsgTypeUrls.Undelegate, MsgTypeUrls.DualUnbond].includes(
-                  a.typeUrl as typeof MsgTypeUrls.Send,
-                ) && (
+                {(
+                  [
+                    MsgTypeUrls.Delegate,
+                    MsgTypeUrls.DualDelegate,
+                    MsgTypeUrls.BeginRedelegate,
+                  ] as string[]
+                ).includes(a.typeUrl) && (
+                  <label>
+                    {a.typeUrl === MsgTypeUrls.BeginRedelegate
+                      ? "Destination validator"
+                      : "Validator"}
+                    <select
+                      aria-label={`${
+                        a.typeUrl === MsgTypeUrls.BeginRedelegate
+                          ? "Destination validator"
+                          : "Validator"
+                      } ${index + 1}`}
+                      value={
+                        a.typeUrl === MsgTypeUrls.BeginRedelegate ? a.destination : a.validator
+                      }
+                      onChange={(e) =>
+                        edit(
+                          a.id,
+                          a.typeUrl === MsgTypeUrls.BeginRedelegate
+                            ? { destination: e.target.value }
+                            : { validator: e.target.value },
+                        )
+                      }
+                    >
+                      <option value="">Choose a validator</option>
+                      {validators
+                        .filter((v) => {
+                          const permission = availablePermission(
+                            state.permissions,
+                            a.typeUrl,
+                            state.time,
+                          );
+                          return (
+                            (a.typeUrl !== MsgTypeUrls.BeginRedelegate ||
+                              v.operatorAddress !== a.validator) &&
+                            (!permission?.allow?.length ||
+                              permission.allow.includes(v.operatorAddress)) &&
+                            !permission?.deny?.includes(v.operatorAddress)
+                          );
+                        })
+                        .map((v) => (
+                          <option key={v.operatorAddress} value={v.operatorAddress}>
+                            {v.description.moniker} — {v.operatorAddress}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                )}
+                {(a.typeUrl === MsgTypeUrls.Delegate || a.typeUrl === MsgTypeUrls.DualDelegate) && (
+                  <p>
+                    Bank balance:{" "}
+                    {display(
+                      state.stakingBalance?.find((c) => c.denom === state.bondDenom)?.amount || "0",
+                      state.bondDenom,
+                    )}
+                    . Vesting tokens may be staked; simulation checks the account’s restrictions.
+                    Delegation does not remove vesting locks.
+                  </p>
+                )}
+                {(a.typeUrl === MsgTypeUrls.DualDelegate ||
+                  a.typeUrl === MsgTypeUrls.DualRedelegate) && (
+                  <label>
+                    {a.typeUrl === MsgTypeUrls.DualRedelegate
+                      ? "Destination provider address"
+                      : "Provider address"}
+                    <input
+                      aria-label={`${
+                        a.typeUrl === MsgTypeUrls.DualRedelegate
+                          ? "Destination provider"
+                          : "Provider"
+                      } ${index + 1}`}
+                      value={a.typeUrl === MsgTypeUrls.DualRedelegate ? a.destination : a.provider}
+                      onChange={(e) =>
+                        edit(
+                          a.id,
+                          a.typeUrl === MsgTypeUrls.DualRedelegate
+                            ? { destination: e.target.value }
+                            : { provider: e.target.value },
+                        )
+                      }
+                    />
+                  </label>
+                )}
+                {a.typeUrl === MsgTypeUrls.BeginRedelegate && (
+                  <p>
+                    Moves existing stake to another validator. Redelegation cooldowns and chain
+                    limits are checked by simulation.
+                  </p>
+                )}
+                {a.typeUrl === MsgTypeUrls.DualRedelegate && (
+                  <p>Moves an existing provider allocation without adding new validator stake.</p>
+                )}
+                {a.typeUrl === MsgTypeUrls.DualClaimRewards && (
+                  <>
+                    <label>
+                      Provider address (optional)
+                      <input
+                        aria-label={`Reward provider ${index + 1}`}
+                        value={a.provider}
+                        onChange={(e) => edit(a.id, { provider: e.target.value })}
+                      />
+                    </label>
+                    <p>
+                      Leave blank to claim rewards from all providers, including previous
+                      allocations. Rewards are paid to the granter; the amount is determined at
+                      execution.
+                    </p>
+                  </>
+                )}
+                {[
+                  MsgTypeUrls.Send,
+                  MsgTypeUrls.Undelegate,
+                  MsgTypeUrls.DualUnbond,
+                  MsgTypeUrls.Delegate,
+                  MsgTypeUrls.BeginRedelegate,
+                  MsgTypeUrls.DualDelegate,
+                  MsgTypeUrls.DualRedelegate,
+                ].includes(a.typeUrl as typeof MsgTypeUrls.Send) && (
                   <label>
                     Amount ({units(a.denom).label})
                     <input

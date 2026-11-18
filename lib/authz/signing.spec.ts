@@ -47,6 +47,35 @@ async function fixture() {
       value: { delegatorAddress: granter, validatorAddress: validator, amount },
     },
     {
+      typeUrl: MsgTypeUrls.Delegate,
+      value: { delegatorAddress: granter, validatorAddress: validator, amount },
+    },
+    {
+      typeUrl: MsgTypeUrls.BeginRedelegate,
+      value: {
+        delegatorAddress: granter,
+        validatorSrcAddress: validator,
+        validatorDstAddress: toBech32("lava@valoper", new Uint8Array(20).fill(8)),
+        amount,
+      },
+    },
+    {
+      typeUrl: MsgTypeUrls.DualDelegate,
+      value: { creator: granter, validator, provider: accounts[0].address, chainID: "*", amount },
+    },
+    {
+      typeUrl: MsgTypeUrls.DualRedelegate,
+      value: {
+        creator: granter,
+        fromProvider: accounts[0].address,
+        toProvider: accounts[1].address,
+        fromChainID: "*",
+        toChainID: "*",
+        amount,
+      },
+    },
+    { typeUrl: MsgTypeUrls.DualClaimRewards, value: { creator: granter, provider: "" } },
+    {
       typeUrl: MsgTypeUrls.DualUnbond,
       value: { creator: granter, validator, provider: accounts[0].address, chainID: "*", amount },
     },
@@ -61,7 +90,7 @@ async function fixture() {
   };
   return { wallets, accounts, pubkey, grantee, tx, actions };
 }
-it.each([0, 1, 2, 3, 4, 5, 6])(
+it.each(Array.from({ length: 12 }, (_, i) => i))(
   "signs and verifies 2-of-3 offline authz, case %i",
   async (index) => {
     const { wallets, accounts, pubkey, grantee, tx, actions } = await fixture();

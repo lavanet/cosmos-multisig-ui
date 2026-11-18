@@ -108,6 +108,10 @@ export default function TxMsgExecDetails({ msgValue }: { msgValue: EncodeObject[
                         amount: "Amount",
                         validatorAddress: "Validator",
                         validator: "Validator",
+                        validatorSrcAddress: "Source validator",
+                        validatorDstAddress: "Destination validator",
+                        fromProvider: "Source provider",
+                        toProvider: "Destination provider",
                         provider: "Provider",
                         proposalId: "Proposal",
                         option: "Vote",
@@ -133,6 +137,15 @@ export default function TxMsgExecDetails({ msgValue }: { msgValue: EncodeObject[
               Rewards go to the granter’s configured withdrawal address:{" "}
               <strong>{withdrawals[innerActor(msg)] || "Loading…"}</strong>. The amount is
               determined at execution.
+            </p>
+          )}
+          {msg.typeUrl === MsgTypeUrls.DualClaimRewards && (
+            <p>
+              Rewards go to the granter.{" "}
+              {msg.value.provider
+                ? "Claims from the specified provider."
+                : "Claims from all providers."}{" "}
+              Amounts are determined at execution.
             </p>
           )}
           {(msg.typeUrl === MsgTypeUrls.Undelegate || msg.typeUrl === MsgTypeUrls.DualUnbond) && (

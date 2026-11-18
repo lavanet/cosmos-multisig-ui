@@ -1,8 +1,14 @@
 /** @jest-environment node */
 import { connectComet } from "@cosmjs/tendermint-rpc";
-import { collectPages, discoverGranters, withAuthzQuery } from "./queries";
+import { collectPages, discoverGranters, loadAuthzAccount, withAuthzQuery } from "./queries";
 import { GenericAuthorization, GrantAuthorization } from "cosmjs-types/cosmos/authz/v1beta1/authz";
-import { QueryGranteeGrantsResponse } from "cosmjs-types/cosmos/authz/v1beta1/query";
+import {
+  QueryGrantsResponse,
+  QueryGranteeGrantsResponse,
+} from "cosmjs-types/cosmos/authz/v1beta1/query";
+import { toBech32 } from "@cosmjs/encoding";
+import { QueryAllBalancesResponse } from "cosmjs-types/cosmos/bank/v1beta1/query";
+import { QueryParamsResponse } from "cosmjs-types/cosmos/staking/v1beta1/query";
 import { MsgTypeUrls } from "../../types/txMsg";
 jest.mock("@cosmjs/tendermint-rpc", () => ({ connectComet: jest.fn() }));
 it("collects all pages and follows exact continuation keys", async () => {
@@ -105,3 +111,48 @@ it("discovers unique wallets across pages with active grants for the exact actio
   expect(client.abciQuery).toHaveBeenCalledTimes(2);
   expect(client.disconnect).toHaveBeenCalledTimes(1);
 });
+
+it.each([MsgTypeUrls.Delegate, MsgTypeUrls.DualDelegate])(
+  "loads full bank balances for staking-only permission %s",
+  async (msg) => {
+    const actor = toBech32("lava@", new Uint8Array(20).fill(1));
+    const responses: Record<string, Uint8Array> = {
+      "/cosmos.authz.v1beta1.Query/Grants": QueryGrantsResponse.encode({
+        grants: [
+          {
+            authorization: {
+              typeUrl: "/cosmos.authz.v1beta1.GenericAuthorization",
+              value: GenericAuthorization.encode({ msg }).finish(),
+            },
+          },
+        ],
+      }).finish(),
+      "/cosmos.staking.v1beta1.Query/Params": QueryParamsResponse.encode(
+        QueryParamsResponse.fromPartial({ params: { bondDenom: "ulava" } }),
+      ).finish(),
+      "/cosmos.bank.v1beta1.Query/AllBalances": QueryAllBalancesResponse.encode({
+        balances: [{ denom: "ulava", amount: "100" }],
+      }).finish(),
+    };
+    const client = {
+      status: jest
+        .fn()
+        .mockResolvedValue({
+          nodeInfo: { network: "lava" },
+          syncInfo: { catchingUp: false, latestBlockHeight: 123, latestBlockTime: new Date(1000) },
+        }),
+      abciQuery: jest.fn().mockImplementation(async ({ path }: { path: string }) => {
+        if (!responses[path]) throw new Error(`Unexpected query ${path}`);
+        return { height: 123, code: 0, value: responses[path] };
+      }),
+      disconnect: jest.fn(),
+    };
+    jest
+      .mocked(connectComet)
+      .mockResolvedValue(client as unknown as Awaited<ReturnType<typeof connectComet>>);
+    const account = await loadAuthzAccount("rpc", "lava", "lava@", actor, actor);
+    expect(account.stakingBalance).toEqual([{ denom: "ulava", amount: "100" }]);
+    expect(account.spendable).toEqual([]);
+    expect(client.abciQuery).toHaveBeenCalledTimes(3);
+  },
+);

@@ -23,7 +23,12 @@ import { MsgTypeUrls } from "../../../types/txMsg";
 jest.mock("./MsgForm", () => ({ __esModule: true, default: () => null }));
 jest.mock("../../../context/ChainsContext", () => ({
   useChains: () => ({
-    validatorState: { validators: [] },
+    validatorState: {
+      validators: validators.map((operatorAddress, i) => ({
+        operatorAddress,
+        description: { moniker: `Validator ${i}` },
+      })),
+    },
     chainsDispatch: jest.fn(),
     chain: {
       chainId: "lava-test",
@@ -229,4 +234,69 @@ it("keeps discovery failures distinct from no authorized wallets and supports re
   expect(screen.queryByRole("alert")).toBeNull();
   expect(screen.getByLabelText("Granter wallet")).toBeDisabled();
   expect(loadAuthzAccount).not.toHaveBeenCalled();
+});
+
+it.each([
+  MsgTypeUrls.Delegate,
+  MsgTypeUrls.BeginRedelegate,
+  MsgTypeUrls.DualDelegate,
+  MsgTypeUrls.DualRedelegate,
+  MsgTypeUrls.DualClaimRewards,
+])("builds and saves the selected guided action %s with the granter as actor", async (typeUrl) => {
+  state.permissions.push({ typeUrl, kind: "generic" });
+  state.stakingBalance = [{ denom: "ulava", amount: "3000000" }];
+  state.delegations = [{ validator: validators[0], amount: "2000000" }];
+  state.providers = [{ provider: granter, amount: "2000000" }];
+  await mount(typeUrl);
+  const amount = { denom: "ulava", amount: "1250000" };
+  let value: Record<string, unknown>;
+  if (typeUrl === MsgTypeUrls.Delegate || typeUrl === MsgTypeUrls.DualDelegate) {
+    fireEvent.change(screen.getByLabelText("Validator 1"), { target: { value: validators[0] } });
+    value = { delegatorAddress: granter, validatorAddress: validators[0], amount };
+    if (typeUrl === MsgTypeUrls.DualDelegate) {
+      fireEvent.change(screen.getByLabelText("Provider 1"), { target: { value: grantee } });
+      value = {
+        creator: granter,
+        validator: validators[0],
+        provider: grantee,
+        chainID: "*",
+        amount,
+      };
+    }
+  } else if (typeUrl === MsgTypeUrls.BeginRedelegate) {
+    fireEvent.change(screen.getByLabelText("Validator 1"), { target: { value: validators[0] } });
+    fireEvent.change(screen.getByLabelText("Destination validator 1"), {
+      target: { value: validators[1] },
+    });
+    value = {
+      delegatorAddress: granter,
+      validatorSrcAddress: validators[0],
+      validatorDstAddress: validators[1],
+      amount,
+    };
+  } else if (typeUrl === MsgTypeUrls.DualRedelegate) {
+    fireEvent.change(screen.getByLabelText("Provider 1"), { target: { value: granter } });
+    fireEvent.change(screen.getByLabelText("Destination provider 1"), {
+      target: { value: grantee },
+    });
+    value = {
+      creator: granter,
+      fromProvider: granter,
+      toProvider: grantee,
+      fromChainID: "*",
+      toChainID: "*",
+      amount,
+    };
+  } else {
+    value = { creator: granter, provider: "" };
+    expect(screen.queryByLabelText("Amount 1")).toBeNull();
+  }
+  if (typeUrl !== MsgTypeUrls.DualClaimRewards) {
+    fireEvent.change(screen.getByLabelText("Amount 1"), { target: { value: "1.25" } });
+  }
+  fireEvent.click(screen.getByRole("button", { name: "Review and simulate" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Create unsigned proposal" }));
+  await waitFor(() => expect(requestJson).toHaveBeenCalledTimes(1));
+  const body = jest.mocked(requestJson).mock.calls[0][1]!.body as { dataJSON: string };
+  expect(JSON.parse(body.dataJSON).msgs[0].value.msgs).toEqual([{ typeUrl, value }]);
 });

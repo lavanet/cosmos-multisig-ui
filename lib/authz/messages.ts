@@ -78,6 +78,11 @@ export const guidedActions = [
   { typeUrl: MsgTypeUrls.Vote, label: "Vote (legacy grant)" },
   { typeUrl: VOTE_V1, label: "Vote" },
   { typeUrl: MsgTypeUrls.WithdrawDelegatorReward, label: "Claim delegation rewards" },
+  { typeUrl: MsgTypeUrls.Delegate, label: "Delegate to validator" },
+  { typeUrl: MsgTypeUrls.BeginRedelegate, label: "Redelegate between validators" },
+  { typeUrl: MsgTypeUrls.DualDelegate, label: "Lava dualstaking delegation" },
+  { typeUrl: MsgTypeUrls.DualRedelegate, label: "Lava dualstaking redelegation" },
+  { typeUrl: MsgTypeUrls.DualClaimRewards, label: "Claim Lava dualstaking rewards" },
   { typeUrl: MsgTypeUrls.Undelegate, label: "Staking unbond" },
   { typeUrl: MsgTypeUrls.DualUnbond, label: "Lava dualstaking unbond" },
 ];

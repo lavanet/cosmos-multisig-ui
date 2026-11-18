@@ -16,12 +16,23 @@ Open **New Transaction** and choose an action from **On behalf of another wallet
 | Vote | `/cosmos.gov.v1.MsgVote` | GenericAuthorization for this exact URL |
 | Vote (legacy grant) | `/cosmos.gov.v1beta1.MsgVote` | GenericAuthorization for this exact URL |
 | Claim delegation rewards | `/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward` | GenericAuthorization |
+| Delegate to validator | `/cosmos.staking.v1beta1.MsgDelegate` | GenericAuthorization or StakeAuthorization with DELEGATE |
+| Redelegate between validators | `/cosmos.staking.v1beta1.MsgBeginRedelegate` | GenericAuthorization or StakeAuthorization with REDELEGATE |
+| Lava dualstaking delegation | `/lavanet.lava.dualstaking.MsgDelegate` | GenericAuthorization |
+| Lava dualstaking redelegation | `/lavanet.lava.dualstaking.MsgRedelegate` | GenericAuthorization |
+| Claim Lava dualstaking rewards | `/lavanet.lava.dualstaking.MsgClaimRewards` | GenericAuthorization |
 | Staking unbond | `/cosmos.staking.v1beta1.MsgUndelegate` | GenericAuthorization or StakeAuthorization with UNDELEGATE |
 | Lava dualstaking unbond | `/lavanet.lava.dualstaking.MsgUnbond` | GenericAuthorization |
 
 Reward rows have individual checkboxes and **Select all**. Each selected validator becomes one inner message. Rewards are sent to the granter's configured withdrawal address, which can differ from both the granter and the multisig. Amounts are determined at execution.
 
 Transfers use **spendable** balances, including vesting restrictions. Known tokens use their registered display units; unknown denominations explicitly use integer base units. This supports bank-held IBC denominations, not cross-chain IBC transfers.
+
+Delegation selects a destination validator; restricted staking grants filter the destination choices. Dualstaking delegation also requires a provider address and stakes new tokens with a validator. Delegation uses the bank balance, which may include locked vesting tokens eligible for staking; it does not remove vesting locks. Transfers still use spendable balances. Both draw from a shared bank budget in a batch, and simulation enforces the account's staking restrictions.
+
+Validator redelegation selects an existing source delegation and a different destination validator. Provider redelegation selects an existing provider allocation and a destination provider address; it does not add validator stake. These actions share source budgets with unbonding. Simulation checks redelegation cooldowns, provider eligibility and chain-specific limits. A batch cannot rely on stake or allocations created by an earlier action to fund a later action.
+
+Dualstaking rewards may be claimed from a specific provider, or from all providers by leaving the optional provider field blank. This includes rewards from previous allocations; the UI does not limit claims to current provider delegations. Rewards are paid to the granter, with amounts determined at execution.
 
 Unbond actions start an unbonding period; they do not immediately transfer tokens. On Lava, ordinary staking undelegation can affect provider allocations. Dualstaking unbond requires both a validator and a provider; provider queries do not identify a specific validator pairing. The complete simulation verifies the actual chain behavior. Vesting locks remain applicable.
 
@@ -45,7 +56,7 @@ The API validates proposal/signature shapes and sizes, and database requests use
 
 ## Existing JSON imports
 
-The examples in this directory remain supported, including legacy delegate, redelegate and dualstaking reward actions. Imported executions may contain multiple granters and multiple `MsgExec` envelopes, but every envelope must use the current multisig as grantee. All affected granters are checked before signing.
+The examples in this directory remain supported, including delegate, redelegate and dualstaking reward actions, which also have guided forms. Imported executions may contain multiple granters and multiple `MsgExec` envelopes, but every envelope must use the current multisig as grantee. All affected granters are checked before signing.
 
 Inner `value` objects use the documented camelCase JSON format, not base64 protobuf Any payloads. Amounts and proposal IDs are strings. Empty batches, unknown/nested actions, invalid addresses, extra fields, and mixed ordinary + authz messages are rejected. Files are limited to 1 MB. The redelegation example's old invalid placeholder destination has been replaced with a valid-format example address; replace examples with your intended addresses.
 
@@ -69,6 +80,8 @@ A second opt-in harness creates a disposable private Lava 6.2.4 chain with deter
 LAVA_AUTHZ_LOCAL_BINARY=/absolute/path/to/lavad npm run test:ci -- --runInBand local.integration
 ```
 
-Use the official v6.2.4 binary; the harness checks the version. Ports 29656, 29657 and 29690 must be free. All listeners bind to loopback. It creates a new temporary node home and never uses your wallet/keyring or a public chain. It covers LAVA and a second bank denomination, both governance versions (including empty/nonempty metadata), reward claims, staking unbond, dualstaking unbond, changed sequence and revoked grants. Resulting token balances, votes and validator delegation amounts are checked. The dualstaking fixture exercises the chain's `empty_provider` allocation; a registered provider remains a manual integration case.
+Use the official v6.2.4 binary; the harness checks the version. Ports 29656, 29657 and 29690 must be free. All listeners bind to loopback. It creates a new temporary node home and never uses your wallet/keyring or a public chain. It covers LAVA and a second bank denomination, both governance versions (including empty/nonempty metadata), reward claims, staking unbond, dualstaking unbond, changed sequence and revoked grants. Resulting token balances, votes and validator delegation amounts are checked. It also executes validator delegation and an all-provider dualstaking reward claim, and checks rejection of unregistered provider destinations. The dualstaking fixture exercises the chain's `empty_provider` allocation; a registered provider remains a manual integration case.
+
+All 11 action types accepted by the authz message validator now have guided forms. This does not enable every standalone transaction module through authz: IBC, contract calls, vesting-account creation, cancel-unbonding, withdrawal-address changes and grant management remain outside this authz allowlist. Adding them requires separate message validation, signing and chain-execution coverage.
 
 Before production release, manually verify the deployed UI, grant expiry during signature collection, and unbonding from a registered provider. Test Keplr and physical Ledger hardware, recording device/app versions. The displayed signing-document size is diagnostic; no fixed size guarantees that every Ledger model/app can parse or display every nested message. The tool never automatically splits a batch into multiple transactions or assigns future sequences.

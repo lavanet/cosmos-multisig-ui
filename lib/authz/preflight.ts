@@ -11,6 +11,9 @@ import { validatePermissions } from "./grants";
 export function validateResources(state: AuthzAccount, messages: readonly EncodeObject[]): void {
   validatePermissions(state.permissions, messages, state.time);
   const funds = new Map(state.spendable.map((c) => [c.denom, BigInt(c.amount)]));
+  const bank = new Map(
+    (state.stakingBalance ?? state.spendable).map((c) => [c.denom, BigInt(c.amount)]),
+  );
   const stake = new Map(state.delegations.map((d) => [d.validator, BigInt(d.amount)]));
   const providers = new Map(state.providers.map((d) => [d.provider, BigInt(d.amount)]));
   const consume = (balances: Map<string, bigint>, key: string, amount: string, label: string) => {
@@ -24,7 +27,35 @@ export function validateResources(state: AuthzAccount, messages: readonly Encode
     }
     const v = msg.value;
     if (msg.typeUrl === MsgTypeUrls.Send) {
-      for (const c of v.amount) consume(funds, c.denom, c.amount, "spendable balance");
+      for (const c of v.amount) {
+        consume(funds, c.denom, c.amount, "spendable balance");
+        consume(bank, c.denom, c.amount, "bank balance");
+      }
+    }
+    if (
+      [
+        MsgTypeUrls.Delegate,
+        MsgTypeUrls.DualDelegate,
+        MsgTypeUrls.BeginRedelegate,
+        MsgTypeUrls.DualRedelegate,
+      ].includes(msg.typeUrl as typeof MsgTypeUrls.Delegate)
+    ) {
+      if (v.amount.denom !== state.bondDenom) throw new Error("Incorrect staking denomination");
+    }
+    if (msg.typeUrl === MsgTypeUrls.Delegate || msg.typeUrl === MsgTypeUrls.DualDelegate) {
+      consume(bank, v.amount.denom, v.amount.amount, "bank balance available for staking");
+    }
+    if (msg.typeUrl === MsgTypeUrls.BeginRedelegate) {
+      if (v.validatorSrcAddress === v.validatorDstAddress) {
+        throw new Error("Choose different source and destination validators");
+      }
+      consume(stake, v.validatorSrcAddress, v.amount.amount, "validator delegation");
+    }
+    if (msg.typeUrl === MsgTypeUrls.DualRedelegate) {
+      if (v.fromProvider === v.toProvider) {
+        throw new Error("Choose different source and destination providers");
+      }
+      consume(providers, v.fromProvider, v.amount.amount, "provider allocation");
     }
     if (msg.typeUrl === MsgTypeUrls.Undelegate || msg.typeUrl === MsgTypeUrls.DualUnbond) {
       if (v.amount.denom !== state.bondDenom) throw new Error("Incorrect staking denomination");
