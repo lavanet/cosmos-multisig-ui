@@ -63,4 +63,12 @@ LAVA_AUTHZ_LIVE_TEST=1 npm run test:ci -- --runInBand live.integration
 
 It reads public grants and simulates an existing authorized reward claim with dummy signatures. It never signs or broadcasts. It uses a public single-key grantee as a chain fixture; it does not replace an end-to-end on-chain multisig test. The fixture may change as grants and balances change.
 
-Before production release, manually verify the deployed UI and run the full multisig workflow on a controlled Lava network, including vote, transfer, reward claim, staking unbond and dualstaking unbond. Test Keplr and physical Ledger hardware, recording device/app versions. The displayed signing-document size is diagnostic; no fixed size guarantees that every Ledger model/app can parse or display every nested message. The tool never automatically splits a batch into multiple transactions or assigns future sequences.
+A second opt-in harness creates a disposable private Lava 6.2.4 chain with deterministic **test-only** keys, signs and broadcasts real 2-of-3 multisig transactions, then stops its node:
+
+```sh
+LAVA_AUTHZ_LOCAL_BINARY=/absolute/path/to/lavad npm run test:ci -- --runInBand local.integration
+```
+
+Use the official v6.2.4 binary; the harness checks the version. Ports 29656, 29657 and 29690 must be free. All listeners bind to loopback. It creates a new temporary node home and never uses your wallet/keyring or a public chain. It covers LAVA and a second bank denomination, both governance versions (including empty/nonempty metadata), reward claims, staking unbond, dualstaking unbond, changed sequence and revoked grants. Resulting token balances, votes and validator delegation amounts are checked. The dualstaking fixture exercises the chain's `empty_provider` allocation; a registered provider remains a manual integration case.
+
+Before production release, manually verify the deployed UI, grant expiry during signature collection, and unbonding from a registered provider. Test Keplr and physical Ledger hardware, recording device/app versions. The displayed signing-document size is diagnostic; no fixed size guarantees that every Ledger model/app can parse or display every nested message. The tool never automatically splits a batch into multiple transactions or assigns future sequences.
