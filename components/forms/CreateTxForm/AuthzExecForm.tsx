@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Account, calculateFee, StargateClient } from "@cosmjs/stargate";
 import { Decimal } from "@cosmjs/math";
 import { EncodeObject } from "@cosmjs/proto-signing";
@@ -50,6 +50,9 @@ export default function AuthzExecForm({
   const router = useRouter();
   const [granter, setGranter] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [discovering, setDiscovering] = useState(true);
+  const [discoveryError, setDiscoveryError] = useState("");
+  const [refresh, setRefresh] = useState(0);
   const [state, setState] = useState<AuthzAccount>();
   const [actions, setActions] = useState<Action[]>([]);
   const [memo, setMemo] = useState("");
@@ -58,6 +61,35 @@ export default function AuthzExecForm({
   const [review, setReview] = useState<{ tx: DbTransaction; gasUsed: number; bytes: number }>();
   const requestId = useRef(0);
   const processing = useRef(false);
+  useEffect(() => {
+    let active = true;
+    const invalidateRequests = () => {
+      requestId.current += 1;
+    };
+    invalidateRequests();
+    setDiscovering(true);
+    setDiscoveryError("");
+    setSuggestions([]);
+    setGranter("");
+    setState(undefined);
+    setActions([]);
+    setReview(undefined);
+    setError("");
+    discoverGranters(chain.nodeAddress, chain.chainId, senderAddress, initialActionType)
+      .then((wallets) => {
+        if (active) setSuggestions(wallets);
+      })
+      .catch((e) => {
+        if (active) setDiscoveryError(e instanceof Error ? e.message : "Could not load wallets");
+      })
+      .finally(() => {
+        if (active) setDiscovering(false);
+      });
+    return () => {
+      active = false;
+      invalidateRequests();
+    };
+  }, [chain.nodeAddress, chain.chainId, senderAddress, initialActionType, refresh]);
   const units = (denom: string) => {
     const asset = chain.assets.find((a) => a.base === denom);
     const display = asset?.denom_units.find((u) => u.denom === asset.display);
@@ -87,7 +119,7 @@ export default function AuthzExecForm({
       setBusy(false);
     }
   };
-  const load = () =>
+  const load = (selectedGranter: string) =>
     run(async () => {
       const id = ++requestId.current;
       setState(undefined);
@@ -97,7 +129,7 @@ export default function AuthzExecForm({
         chain.nodeAddress,
         chain.chainId,
         chain.addressPrefix,
-        granter.trim(),
+        selectedGranter,
         senderAddress,
       );
       if (id === requestId.current) {
@@ -258,63 +290,56 @@ export default function AuthzExecForm({
       <fieldset disabled={busy}>
         <label>
           Granter wallet
-          <input
+          <select
             aria-label="Granter wallet"
-            list="authz-granters"
+            disabled={discovering || !!discoveryError || !suggestions.length}
             value={granter}
             onChange={(e) => {
+              const selected = e.target.value;
               ++requestId.current;
-              setGranter(e.target.value);
+              setGranter(selected);
               setState(undefined);
               setActions([]);
               reset();
+              if (selected && suggestions.includes(selected)) void load(selected);
             }}
-            placeholder={`${chain.addressPrefix}1…`}
-          />
+          >
+            <option value="">
+              {discovering ? "Finding authorized wallets…" : "Choose a wallet"}
+            </option>
+            {suggestions.map((address) => (
+              <option key={address} value={address}>
+                {address}
+              </option>
+            ))}
+          </select>
         </label>
-        <datalist id="authz-granters">
-          {suggestions.map((a) => (
-            <option key={a} value={a} />
-          ))}
-        </datalist>
+        <p>
+          Only wallets with an active grant for this transaction type are listed. Spending and
+          validator restrictions are checked after selection.
+        </p>
+        {discovering && <p role="status">Finding wallets that authorized this multisig…</p>}
+        {discoveryError && <p role="alert">Could not load authorized wallets: {discoveryError}</p>}
+        {!discovering && !discoveryError && !suggestions.length && (
+          <p>
+            No wallets have granted this multisig permission for this transaction type. The wallet
+            owner must grant permission first.
+          </p>
+        )}
         <div className="buttons">
           <button
             type="button"
-            onClick={() =>
-              run(async () => {
-                setSuggestions(
-                  await discoverGranters(chain.nodeAddress, chain.chainId, senderAddress),
-                );
-              })
-            }
+            disabled={discovering}
+            onClick={() => setRefresh((value) => value + 1)}
           >
-            Find wallets with grants
+            Refresh wallets
           </button>
-          <button type="button" onClick={load}>
-            Load permissions and balances
-          </button>
+          {granter && !state && (
+            <button type="button" onClick={() => load(granter)}>
+              Retry loading wallet
+            </button>
+          )}
         </div>
-        {suggestions.length > 0 && (
-          <label>
-            Wallets with grants
-            <select
-              aria-label="Wallets with grants"
-              value={granter}
-              onChange={(e) => {
-                ++requestId.current;
-                setGranter(e.target.value);
-                setState(undefined);
-                setActions([]);
-                reset();
-              }}
-            >
-              <option value="">Choose a wallet</option>
-              {suggestions.map((a) => (
-                <option key={a}>{a}</option>
-              ))}
-            </select>
-          </label>
-        )}
         {state && (
           <>
             <p>

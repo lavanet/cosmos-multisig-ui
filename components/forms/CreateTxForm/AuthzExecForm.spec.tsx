@@ -14,7 +14,7 @@ import { NextRouter } from "next/router";
 import { RouterContext } from "next/dist/shared/lib/router-context";
 import AuthzExecForm from "./AuthzExecForm";
 import CreateTxForm from ".";
-import { AuthzAccount, loadAuthzAccount } from "../../../lib/authz/queries";
+import { AuthzAccount, discoverGranters, loadAuthzAccount } from "../../../lib/authz/queries";
 import { preflightExec } from "../../../lib/authz/preflight";
 import { getMultisigAccount } from "../../../lib/multisigHelpers";
 import { requestJson } from "../../../lib/request";
@@ -95,6 +95,7 @@ beforeEach(async () => {
     withdrawAddress: granter,
     proposals: [],
   };
+  jest.mocked(discoverGranters).mockResolvedValue([granter, grantee]);
   jest.mocked(loadAuthzAccount).mockResolvedValue(state);
   jest.mocked(preflightExec).mockResolvedValue(200000);
   jest
@@ -102,7 +103,7 @@ beforeEach(async () => {
     .mockResolvedValue([pubkey, { address: grantee, accountNumber: 17, sequence: 9, pubkey }]);
   jest.mocked(requestJson).mockResolvedValue({ transactionID: "0x123" });
 });
-async function mount(initialActionType?: string) {
+function renderForm(initialActionType?: string) {
   render(
     <StrictMode>
       <RouterContext.Provider value={{ push: jest.fn() } as unknown as NextRouter}>
@@ -115,8 +116,11 @@ async function mount(initialActionType?: string) {
       </RouterContext.Provider>
     </StrictMode>,
   );
+}
+async function mount(initialActionType?: string) {
+  renderForm(initialActionType);
+  await screen.findByRole("option", { name: granter });
   fireEvent.change(screen.getByLabelText("Granter wallet"), { target: { value: granter } });
-  fireEvent.click(screen.getByRole("button", { name: "Load permissions and balances" }));
   await screen.findByText(/Loaded at block 123/);
 }
 it("selects all rewards and saves one ordered MsgExec with multisig account data", async () => {
@@ -164,6 +168,7 @@ it("resets actions when granter changes and disables unavailable actions", async
   fireEvent.change(screen.getByLabelText("Granter wallet"), { target: { value: grantee } });
   expect(screen.queryByLabelText("Recipient 1")).toBeNull();
   expect(screen.queryByRole("button", { name: "Review and simulate" })).toBeNull();
+  await screen.findByText(/Loaded at block 123/);
 });
 
 it("opens the selected authz action from the existing transaction modules on the same screen", async () => {
@@ -182,8 +187,8 @@ it("opens the selected authz action from the existing transaction modules on the
   expect(
     screen.getByRole("heading", { name: "Transfer tokens — on behalf of another wallet" }),
   ).toBeInTheDocument();
+  await screen.findByRole("option", { name: granter });
   fireEvent.change(screen.getByLabelText("Granter wallet"), { target: { value: granter } });
-  fireEvent.click(screen.getByRole("button", { name: "Load permissions and balances" }));
   await screen.findByLabelText("Recipient 1");
   expect(screen.getByLabelText("Amount 1")).toBeInTheDocument();
   expect(screen.getByText("Permissions (2)").closest("details")).not.toHaveAttribute("open");
@@ -196,7 +201,6 @@ it("preserves the selected action when a different granter is loaded", async () 
   fireEvent.change(screen.getByLabelText("Recipient 1"), { target: { value: grantee } });
   fireEvent.change(screen.getByLabelText("Granter wallet"), { target: { value: grantee } });
   expect(screen.queryByLabelText("Recipient 1")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Load permissions and balances" }));
   expect(await screen.findByLabelText("Recipient 1")).toHaveValue("");
 });
 it("shows the chosen action but blocks review if the wallet lacks its grant", async () => {
@@ -204,4 +208,25 @@ it("shows the chosen action but blocks review if the wallet lacks its grant", as
   expect(screen.getByRole("alert")).toHaveTextContent("no matching, unexpired permission");
   expect(screen.getByRole("button", { name: "Review and simulate" })).toBeDisabled();
   expect(requestJson).not.toHaveBeenCalled();
+});
+
+it("discovers wallets for the exact selected action without automatically choosing one", async () => {
+  renderForm(MsgTypeUrls.Send);
+  expect(screen.getByLabelText("Granter wallet")).toBeDisabled();
+  await screen.findByRole("option", { name: granter });
+  expect(discoverGranters).toHaveBeenLastCalledWith("rpc", "lava-test", grantee, MsgTypeUrls.Send);
+  expect(screen.getByLabelText("Granter wallet")).toHaveValue("");
+  expect(loadAuthzAccount).not.toHaveBeenCalled();
+});
+it("keeps discovery failures distinct from no authorized wallets and supports retry", async () => {
+  jest.mocked(discoverGranters).mockRejectedValue(new Error("RPC unavailable"));
+  renderForm(MsgTypeUrls.Send);
+  expect(await screen.findByRole("alert")).toHaveTextContent("RPC unavailable");
+  expect(screen.getByLabelText("Granter wallet")).toBeDisabled();
+  jest.mocked(discoverGranters).mockResolvedValue([]);
+  fireEvent.click(screen.getByRole("button", { name: "Refresh wallets" }));
+  await screen.findByText(/No wallets/);
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.getByLabelText("Granter wallet")).toBeDisabled();
+  expect(loadAuthzAccount).not.toHaveBeenCalled();
 });

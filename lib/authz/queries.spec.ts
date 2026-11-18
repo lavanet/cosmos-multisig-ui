@@ -1,6 +1,9 @@
 /** @jest-environment node */
 import { connectComet } from "@cosmjs/tendermint-rpc";
-import { collectPages, withAuthzQuery } from "./queries";
+import { collectPages, discoverGranters, withAuthzQuery } from "./queries";
+import { GenericAuthorization, GrantAuthorization } from "cosmjs-types/cosmos/authz/v1beta1/authz";
+import { QueryGranteeGrantsResponse } from "cosmjs-types/cosmos/authz/v1beta1/query";
+import { MsgTypeUrls } from "../../types/txMsg";
 jest.mock("@cosmjs/tendermint-rpc", () => ({ connectComet: jest.fn() }));
 it("collects all pages and follows exact continuation keys", async () => {
   const query = jest
@@ -47,4 +50,58 @@ it("pins chain queries to a consistent height and disconnects", async () => {
     withAuthzQuery("rpc", "lava", (rpc) => rpc.request("service", "Method", new Uint8Array())),
   ).rejects.toThrow(/snapshot/);
   expect(client.disconnect).toHaveBeenCalledTimes(3);
+});
+
+it("discovers unique wallets across pages with active grants for the exact action", async () => {
+  const grant = (granter: string, msg: string = MsgTypeUrls.Send, seconds?: bigint) =>
+    GrantAuthorization.fromPartial({
+      granter,
+      grantee: "multisig",
+      authorization: {
+        typeUrl: "/cosmos.authz.v1beta1.GenericAuthorization",
+        value: GenericAuthorization.encode({ msg }).finish(),
+      },
+      expiration: seconds === undefined ? undefined : { seconds, nanos: 0 },
+    });
+  const page = (grants: GrantAuthorization[], nextKey = new Uint8Array()) => ({
+    height: 123,
+    code: 0,
+    value: QueryGranteeGrantsResponse.encode({
+      grants,
+      pagination: { nextKey, total: 0n },
+    }).finish(),
+  });
+  const client = {
+    status: jest.fn().mockResolvedValue({
+      nodeInfo: { network: "lava" },
+      syncInfo: { catchingUp: false, latestBlockHeight: 123, latestBlockTime: new Date(1000) },
+    }),
+    abciQuery: jest
+      .fn()
+      .mockResolvedValueOnce(
+        page(
+          [
+            grant("wallet-b"),
+            grant("expired", MsgTypeUrls.Send, 1n),
+            grant("unrelated", MsgTypeUrls.Vote),
+            {
+              ...grant("unsupported"),
+              authorization: { typeUrl: "unknown", value: new Uint8Array() },
+            },
+          ],
+          Uint8Array.from([7]),
+        ),
+      )
+      .mockResolvedValueOnce(page([grant("wallet-b"), grant("wallet-a", MsgTypeUrls.Send, 2n)])),
+    disconnect: jest.fn(),
+  };
+  jest
+    .mocked(connectComet)
+    .mockResolvedValue(client as unknown as Awaited<ReturnType<typeof connectComet>>);
+  await expect(discoverGranters("rpc", "lava", "multisig", MsgTypeUrls.Send)).resolves.toEqual([
+    "wallet-a",
+    "wallet-b",
+  ]);
+  expect(client.abciQuery).toHaveBeenCalledTimes(2);
+  expect(client.disconnect).toHaveBeenCalledTimes(1);
 });

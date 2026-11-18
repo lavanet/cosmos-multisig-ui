@@ -84,6 +84,7 @@ export async function discoverGranters(
   url: string,
   chainId: string,
   grantee: string,
+  typeUrl?: string,
 ): Promise<string[]> {
   return withAuthzQuery(url, chainId, async (rpc, _, time) => {
     const query = new AuthzQuery(rpc);
@@ -96,11 +97,15 @@ export async function discoverGranters(
         grants
           .filter((g) => {
             const p = decodeGrant(g);
-            return p.expires === undefined || p.expires > time;
+            return (
+              p.kind !== "unsupported" &&
+              (!typeUrl || p.typeUrl === typeUrl) &&
+              (p.expires === undefined || p.expires > time)
+            );
           })
           .map((g) => g.granter),
       ),
-    );
+    ).sort();
   });
 }
 export async function loadAuthzAccount(
