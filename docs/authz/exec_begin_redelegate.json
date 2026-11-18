@@ -9,7 +9,7 @@
             "value": {
               "delegatorAddress": "lava@1e3yksvnp3wwqja79w7527k3th4yjyapmvp706e",
               "validatorSrcAddress": "lava@valoper1e35nhndvsw8wes9hq49ckpyzmwhswq40sklx20",
-              "validatorDstAddress": "lava@valoper1xyznhndvsw8wes9hq49ckpyzmwhswq40abcd",
+              "validatorDstAddress": "lava@valoper1jfap4c3chh6hprx0utekpxpwdgxwaheacgtvu5",
               "amount": {
                 "denom": "ulava",
                 "amount": "1"

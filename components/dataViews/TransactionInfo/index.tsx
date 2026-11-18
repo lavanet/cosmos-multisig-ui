@@ -1,3 +1,4 @@
+import TxMsgExecDetails from "./TxMsgExecDetails";
 import TxMsgCancelUnbondingDelegationDetails from "./TxMsgCancelUnbondingDelegationDetails";
 import { EncodeObject } from "@cosmjs/proto-signing";
 import { useChains } from "../../../context/ChainsContext";
@@ -68,7 +69,7 @@ const TxMsgDetails = ({ typeUrl, value: msgValue }: EncodeObject) => {
     case MsgTypeUrls.MsgGrant:
       return <TxRawDetails msgValue={msgValue} label="Msg Grant" />;
     case MsgTypeUrls.MsgExecGrant:
-      return <TxRawDetails msgValue={msgValue} label="Msg Exec Grant" />;
+      return <TxMsgExecDetails msgValue={msgValue} />;
     default:
       return null;
   }

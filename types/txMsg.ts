@@ -20,7 +20,7 @@ import {
   MsgInstantiateContract2,
   MsgMigrateContract,
 } from "cosmjs-types/cosmwasm/wasm/v1/tx";
-import { MsgGrant } from "cosmjs-types/cosmos/authz/v1beta1/tx";
+import { MsgGrant, MsgExec } from "cosmjs-types/cosmos/authz/v1beta1/tx";
 import { MsgTransfer } from "cosmjs-types/ibc/applications/transfer/v1/tx";
 import { MsgDualClaimRewards, MsgDualDelegate, MsgDualRedelegate, MsgDualUnbond } from "./lava";
 import { StakeAuthorization } from "@lavanet/lavajs/dist/codegen/cosmos/staking/v1beta1/authz";
@@ -74,7 +74,7 @@ export const MsgCodecs = {
   [MsgTypeUrls.DualClaimRewards]: MsgDualClaimRewards,
   [MsgTypeUrls.MsgGrant]: MsgGrant,
   [MsgTypeUrls.StakeAuthorization]: StakeAuthorization,
-  [MsgTypeUrls.MsgExecGrant]: MsgGrant,
+  [MsgTypeUrls.MsgExecGrant]: MsgExec,
 } as const;
 export const SupportFileFeatureMsgTypes = [
   MsgTypeUrls.CancelUnbondingDelegation,

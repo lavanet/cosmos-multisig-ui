@@ -1,0 +1,161 @@
+import "@testing-library/jest-dom";
+import { TextEncoder, TextDecoder } from "util";
+Object.assign(global, { TextEncoder, TextDecoder });
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
+import { toBech32 } from "@cosmjs/encoding";
+import {
+  Secp256k1Wallet,
+  createMultisigThresholdPubkey,
+  encodeSecp256k1Pubkey,
+  pubkeyToAddress,
+} from "@cosmjs/amino";
+import { NextRouter } from "next/router";
+import { RouterContext } from "next/dist/shared/lib/router-context";
+import AuthzExecForm from "./AuthzExecForm";
+import { AuthzAccount, loadAuthzAccount } from "../../../lib/authz/queries";
+import { preflightExec } from "../../../lib/authz/preflight";
+import { getMultisigAccount } from "../../../lib/multisigHelpers";
+import { requestJson } from "../../../lib/request";
+import { MsgTypeUrls } from "../../../types/txMsg";
+jest.mock("../../../context/ChainsContext", () => ({
+  useChains: () => ({
+    chain: {
+      chainId: "lava-test",
+      addressPrefix: "lava@",
+      nodeAddress: "rpc",
+      registryName: "lava",
+      denom: "ulava",
+      gasPrice: "0.025ulava",
+      assets: [
+        {
+          base: "ulava",
+          display: "lava",
+          symbol: "LAVA",
+          denom_units: [{ denom: "lava", exponent: 6 }],
+        },
+      ],
+    },
+  }),
+}));
+jest.mock("../../../lib/authz/queries", () => ({
+  loadAuthzAccount: jest.fn(),
+  discoverGranters: jest.fn(),
+  withAuthzQuery: jest.fn().mockRejectedValue(new Error("offline")),
+}));
+jest.mock("../../../lib/authz/preflight", () => ({
+  ...jest.requireActual("../../../lib/authz/preflight"),
+  preflightExec: jest.fn(),
+}));
+jest.mock("../../../lib/multisigHelpers", () => ({ getMultisigAccount: jest.fn() }));
+jest.mock("../../../lib/request", () => ({ requestJson: jest.fn() }));
+jest.mock("@cosmjs/stargate", () => ({
+  ...jest.requireActual("@cosmjs/stargate"),
+  StargateClient: { connect: jest.fn().mockResolvedValue({ disconnect: jest.fn() }) },
+}));
+const granter = toBech32("lava@", new Uint8Array(20).fill(8));
+const validators = [1, 2].map((n) => toBech32("lava@valoper", new Uint8Array(20).fill(n)));
+let state: AuthzAccount;
+let grantee: string;
+beforeEach(async () => {
+  jest.clearAllMocks();
+  let id = 0;
+  Object.defineProperty(global.crypto, "randomUUID", {
+    configurable: true,
+    value: () => `id-${id++}`,
+  });
+  const wallet = await Secp256k1Wallet.fromKey(new Uint8Array(32).fill(5), "lava@");
+  const pubkey = createMultisigThresholdPubkey(
+    [encodeSecp256k1Pubkey((await wallet.getAccounts())[0].pubkey)],
+    1,
+  );
+  grantee = pubkeyToAddress(pubkey, "lava@");
+  state = {
+    granter,
+    grantee,
+    height: 123,
+    time: 1000,
+    permissions: [MsgTypeUrls.Send, MsgTypeUrls.WithdrawDelegatorReward].map((typeUrl) => ({
+      typeUrl,
+      kind: "generic",
+    })),
+    spendable: [{ denom: "ulava", amount: "2000000" }],
+    bondDenom: "ulava",
+    delegations: [],
+    providers: [],
+    rewards: validators.map((validator) => ({
+      validator,
+      coins: [{ denom: "ulava", amount: "1" }],
+    })),
+    withdrawAddress: granter,
+    proposals: [],
+  };
+  jest.mocked(loadAuthzAccount).mockResolvedValue(state);
+  jest.mocked(preflightExec).mockResolvedValue(200000);
+  jest
+    .mocked(getMultisigAccount)
+    .mockResolvedValue([pubkey, { address: grantee, accountNumber: 17, sequence: 9, pubkey }]);
+  jest.mocked(requestJson).mockResolvedValue({ transactionID: "0x123" });
+});
+async function mount() {
+  render(
+    <StrictMode>
+      <RouterContext.Provider value={{ push: jest.fn() } as unknown as NextRouter}>
+        <AuthzExecForm
+          senderAddress={grantee}
+          accountOnChain={{ address: grantee, accountNumber: 17, sequence: 9, pubkey: null }}
+          onBack={jest.fn()}
+        />
+      </RouterContext.Provider>
+    </StrictMode>,
+  );
+  fireEvent.change(screen.getByLabelText("Granter wallet"), { target: { value: granter } });
+  fireEvent.click(screen.getByRole("button", { name: "Load permissions and balances" }));
+  await screen.findByText(/Loaded at block 123/);
+}
+it("selects all rewards and saves one ordered MsgExec with multisig account data", async () => {
+  await mount();
+  fireEvent.click(screen.getByRole("button", { name: "Claim delegation rewards" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Select all reward validators" }));
+  fireEvent.click(screen.getByRole("button", { name: "Review and simulate" }));
+  await screen.findByRole("button", { name: "Create unsigned proposal" });
+  expect(requestJson).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Create unsigned proposal" }));
+  await waitFor(() => expect(requestJson).toHaveBeenCalledTimes(1));
+  const body = jest.mocked(requestJson).mock.calls[0][1]!.body as { dataJSON: string };
+  const tx = JSON.parse(body.dataJSON);
+  expect(tx.accountNumber).toBe(17);
+  expect(tx.sequence).toBe(9);
+  expect(tx.msgs).toHaveLength(1);
+  expect(tx.msgs[0].value.grantee).toBe(grantee);
+  expect(
+    tx.msgs[0].value.msgs.map(
+      (m: { value: { validatorAddress: string; delegatorAddress: string } }) => m.value,
+    ),
+  ).toEqual(
+    validators.map((validatorAddress) => ({ validatorAddress, delegatorAddress: granter })),
+  );
+  expect(tx.fee.gas).toBe("280000");
+  expect(preflightExec).toHaveBeenCalledTimes(3);
+});
+it("blocks saving when refreshed grants or simulation fail", async () => {
+  await mount();
+  fireEvent.click(screen.getByRole("button", { name: "Transfer tokens" }));
+  fireEvent.change(screen.getByLabelText("Recipient 1"), { target: { value: grantee } });
+  fireEvent.change(screen.getByLabelText("Amount 1"), { target: { value: "1.25" } });
+  jest.mocked(preflightExec).mockRejectedValueOnce(new Error("Grant revoked"));
+  fireEvent.click(screen.getByRole("button", { name: "Review and simulate" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Grant revoked");
+  expect(screen.queryByRole("button", { name: "Create unsigned proposal" })).toBeNull();
+  expect(requestJson).not.toHaveBeenCalled();
+});
+it("resets actions when granter changes and disables unavailable actions", async () => {
+  await mount();
+  expect(
+    (screen.getByRole("button", { name: "Staking unbond" }) as HTMLButtonElement).disabled,
+  ).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "Transfer tokens" }));
+  fireEvent.change(screen.getByLabelText("Granter wallet"), { target: { value: grantee } });
+  expect(screen.queryByLabelText("Recipient 1")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Review and simulate" })).toBeNull();
+});

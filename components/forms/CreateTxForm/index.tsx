@@ -1,3 +1,8 @@
+import AuthzExecForm from "./AuthzExecForm";
+import { execMessages, hasExec, normalizeExec } from "../../../lib/authz/messages";
+import { preflightExec } from "../../../lib/authz/preflight";
+import { getMultisigAccount } from "../../../lib/multisigHelpers";
+import { StargateClient } from "@cosmjs/stargate";
 import { validateCancelUnbondingMessages } from "../../../lib/cancelUnbonding";
 import { loadValidators } from "@/context/ChainsContext/helpers";
 import { toastError, toastSuccess } from "@/lib/utils";
@@ -46,6 +51,7 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
     chainsDispatch,
   } = useChains();
 
+  const [authzMode, setAuthzMode] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [msgTypes, setMsgTypes] = useState<
     readonly [MsgTypeUrl, EncodeObject["value"] | undefined][]
@@ -82,6 +88,10 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
   const [fileError, setFileError] = useState<string>("");
   const handleFileMessages = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    if (file && file.size > 1000000) {
+      setFileError("File exceeds 1 MB");
+      return;
+    }
     if (!file) {
       setFileError("No file selected");
       return;
@@ -100,34 +110,33 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
           return;
         }
 
+        if (!parsedContent.length || parsedContent.length > 100)
+          {throw new Error("Invalid message count");}
         for (const msg of parsedContent) {
           if (
-            !msg.typeUrl ||
-            !msg.value ||
+            !msg ||
             typeof msg.typeUrl !== "string" ||
-            typeof msg.value !== "object"
-          ) {
-            setFileError("Invalid file format. Please upload a valid messages");
-            return;
-          }
-          if (!SupportFileFeatureMsgTypes.includes(msg.typeUrl)) {
-            toastError({
-              description: `Unsupported message type: ${msg.typeUrl}. Skipping this message`,
-            });
-            continue;
-          }
-
-          if (validatorMsgsType.includes(msg.typeUrl)) {
-            addMsgWithValidator(msg.typeUrl, msg.value);
-            continue;
-          }
-
-          addMsgType(msg.typeUrl, msg.value);
+            !msg.value ||
+            typeof msg.value !== "object" ||
+            !SupportFileFeatureMsgTypes.includes(msg.typeUrl)
+          )
+            {throw new Error("Unsupported or malformed message");}
+        }
+        const existing = msgGetters.current.flatMap((getter) => getter.msgs ?? [getter.msg]);
+        if (hasExec([...existing, ...parsedContent]))
+          {execMessages([...existing, ...parsedContent], senderAddress);}
+        for (const msg of parsedContent) {
+          if (validatorMsgsType.includes(msg.typeUrl)) {addMsgWithValidator(msg.typeUrl, msg.value);}
+          else
+            {addMsgType(
+              msg.typeUrl,
+              hasExec([msg]) ? normalizeExec(msg, senderAddress).value : msg.value,
+            );}
         }
         toastSuccess("Messages added from file");
         setFileError(""); // Clear any previous errors
       } catch (err) {
-        setFileError("Invalid file format. Please upload a valid JSON");
+        setFileError(err instanceof Error ? err.message : "Invalid transaction JSON");
       }
     };
     reader.onerror = () => {
@@ -170,6 +179,20 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
         memo,
       };
 
+      if (hasExec(msgs)) {
+        execMessages(msgs, senderAddress);
+        const client = await StargateClient.connect(chain.nodeAddress);
+        try {
+          const [pubkey] = await getMultisigAccount(senderAddress, chain.addressPrefix, client);
+          const used = await preflightExec(chain.nodeAddress, chain.addressPrefix, tx, pubkey);
+          if (used > gasLimit)
+            {throw new Error(
+              `Gas limit is too low. Simulation used ${used}. Increase the limit and retry.`,
+            );}
+        } finally {
+          client.disconnect();
+        }
+      }
       const { transactionID } = await requestJson("/api/transaction", {
         body: { dataJSON: JSON.stringify(tx) },
       });
@@ -187,12 +210,37 @@ const CreateTxForm = ({ router, senderAddress, accountOnChain }: CreateTxFormPro
     }
   };
 
+  if (authzMode)
+    {return (
+      <AuthzExecForm
+        key={`${chain.chainId}/${senderAddress}`}
+        senderAddress={senderAddress}
+        accountOnChain={accountOnChain}
+        onBack={() => setAuthzMode(false)}
+      />
+    );}
+
   return (
     <StackableContainer
       lessPadding
       divProps={{ style: { width: "min(690px, 90vw)", maxWidth: "690px" } }}
     >
       <h2>Create New Transaction</h2>
+      <Button
+        label="Act on behalf of another wallet"
+        onClick={() => {
+          if (
+            msgTypes.length &&
+            !window.confirm("Discard the current message draft and switch to authz execution?")
+          )
+            {return;}
+          setMsgTypes([]);
+          setMsgKeys([]);
+          msgGetters.current = [];
+          setGasLimit(gasOfTx([]));
+          setAuthzMode(true);
+        }}
+      />
       {msgTypes.length ? (
         msgTypes.map(([msgType, msgValue], index) => (
           <MsgForm

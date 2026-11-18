@@ -1,4 +1,4 @@
-import { DbAccount, DbSignature, DbTransaction } from "../types";
+import { DbAccount, DbSignature } from "../types";
 import { requestGraphQlJson } from "./request";
 
 /**
@@ -10,13 +10,18 @@ import { requestGraphQlJson } from "./request";
 const createMultisig = async (multisig: DbAccount) => {
   return requestGraphQlJson({
     body: {
+      variables: {
+        chainId: multisig.chainId,
+        address: multisig.address,
+        pubkey: multisig.pubkeyJSON,
+      },
       query: `
-        mutation AddMultisig {
+        mutation AddMultisig($chainId: String!, $address: String!, $pubkey: String!) {
           addMultisig(
             input: {
-              chainId: "${multisig.chainId}"
-              address: "${multisig.address}"
-              pubkeyJSON: ${JSON.stringify(multisig.pubkeyJSON)}
+              chainId: $chainId
+              address: $address
+              pubkeyJSON: $pubkey
             }
           ) {
             multisig {
@@ -57,9 +62,10 @@ async function getMultisig(
 ): Promise<MultisigFromQuery | undefined> {
   const result = await requestGraphQlJson({
     body: {
+      variables: { address, chainId },
       query: `
-        query MultisigsByAddressAndChainId {
-          queryMultisig(filter: {address: {eq: "${address}"}, chainId: {eq: "${chainId}"}}) {
+        query MultisigsByAddressAndChainId($address: String!, $chainId: String!) {
+          queryMultisig(filter: {address: {eq: $address}, chainId: {eq: $chainId}}) {
             address
             chainId
             pubkeyJSON
@@ -79,12 +85,13 @@ async function getMultisig(
  * @param {object} transaction The base transaction
  * @return Returns async function that makes a request to the dgraph graphql endpoint
  */
-const createTransaction = async (transaction: DbTransaction) => {
+const createTransaction = async (transaction: string) => {
   return requestGraphQlJson({
     body: {
+      variables: { data: transaction },
       query: `
-        mutation AddTransaction {
-          addTransaction(input: { dataJSON: ${JSON.stringify(transaction)} }) {
+        mutation AddTransaction($data: String!) {
+          addTransaction(input: { dataJSON: $data }) {
             transaction {
               id
             }
@@ -104,9 +111,10 @@ const createTransaction = async (transaction: DbTransaction) => {
 const findTransactionByID = async (id: string) => {
   return requestGraphQlJson({
     body: {
+      variables: { id },
       query: `
-        query GetTransaction {
-          getTransaction(id: "${id}") {
+        query GetTransaction($id: ID!) {
+          getTransaction(id: $id) {
             dataJSON
             txHash
             signatures {
@@ -131,10 +139,11 @@ const findTransactionByID = async (id: string) => {
 const updateTxHash = async (id: string, txHash: string) => {
   return requestGraphQlJson({
     body: {
+      variables: { id: [id], hash: txHash },
       query: `
-        mutation UpdateTransaction {
+        mutation UpdateTransaction($id: [ID!]!, $hash: String!) {
           updateTransaction(
-            input: { filter: { id: "${id}" }, set: { txHash: "${txHash}" } }
+            input: { filter: { id: $id }, set: { txHash: $hash } }
           ) {
             transaction {
               id
@@ -163,14 +172,20 @@ const updateTxHash = async (id: string, txHash: string) => {
 const createSignature = async (signature: DbSignature, transactionId: string) => {
   return requestGraphQlJson({
     body: {
+      variables: {
+        id: transactionId,
+        address: signature.address,
+        signature: signature.signature,
+        body: signature.bodyBytes,
+      },
       query: `
-        mutation AddSignature {
+        mutation AddSignature($id: ID!, $address: String!, $signature: String!, $body: String!) {
           addSignature(
             input: {
-              transaction: { id: "${transactionId}" }
-              address: "${signature.address}"
-              signature: "${signature.signature}"
-              bodyBytes: "${signature.bodyBytes}"
+              transaction: { id: $id }
+              address: $address
+              signature: $signature
+              bodyBytes: $body
             }
           ) {
             signature {

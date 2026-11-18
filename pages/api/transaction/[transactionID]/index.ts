@@ -1,3 +1,4 @@
+import { recordId, txHashSchema } from "../../../../lib/apiValidation";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { updateTxHash } from "../../../../lib/graphqlHelpers";
 
@@ -5,8 +6,8 @@ export default async function transactionIDApi(req: NextApiRequest, res: NextApi
   switch (req.method) {
     case "POST":
       try {
-        const transactionID = req.query.transactionID?.toString() || "";
-        const { txHash } = req.body;
+        const transactionID = recordId.parse(req.query.transactionID);
+        const txHash = txHashSchema.parse(req.body.txHash);
         console.log("Function `updateTransaction` invoked", txHash);
         const saveRes = await updateTxHash(transactionID, txHash);
         console.log("success", saveRes.data);

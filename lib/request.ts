@@ -5,7 +5,7 @@ export const requestJson = async (
   { method, headers, body, ...restConfig }: RequestConfig = {},
 ) => {
   const config: RequestInit = {
-    method: method ?? body ? "POST" : "GET",
+    method: method ?? (body ? "POST" : "GET"),
     headers: body ? { "Content-Type": "application/json", ...headers } : headers,
     body: body ? JSON.stringify(body) : null,
     ...restConfig,
@@ -22,7 +22,9 @@ export const requestGhJson = (endpoint: string, { headers, ...restConfig }: Requ
   });
 };
 
-type RequestGraphQlJsonConfig = Omit<RequestInit, "body"> & { body: { query: string } };
+type RequestGraphQlJsonConfig = Omit<RequestInit, "body"> & {
+  body: { query: string; variables?: Record<string, unknown> };
+};
 
 export const requestGraphQlJson = (config: RequestGraphQlJsonConfig) =>
   requestJson(process.env.DGRAPH_URL || "", {

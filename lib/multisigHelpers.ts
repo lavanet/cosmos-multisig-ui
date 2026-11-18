@@ -100,6 +100,10 @@ const getMultisigAccount = async (
     }
   }
 
+  assert(
+    isMultisigThresholdPubkey(pubkey) && pubkeyToAddress(pubkey, addressPrefix) === address,
+    "Multisig public key does not match address",
+  );
   return [pubkey, accountOnChain];
 };
 
