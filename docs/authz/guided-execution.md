@@ -4,7 +4,7 @@ Open **New Transaction** and choose an action from **On behalf of another wallet
 
 1. Choose the transaction type, then select a granter from the wallet dropdown in the same inline form. It automatically lists only wallets with an active supported grant for that exact action. Use **Refresh wallets** to query again.
 2. Selecting a wallet automatically loads its permissions and balances. The screen shows grant expiration, remaining allowance, allowed recipients and validator restrictions. Unsupported and expired grants cannot enable actions.
-3. Complete the selected action. Use **Add another action** to build a batch in execution order; remove or move actions up as needed.
+3. Complete the selected action. Each guided proposal uses one grant transaction type. To choose a different type, remove the transaction and choose another module. Reward claims can still select multiple validators of that same type.
 4. **Review and simulate** checks fresh chain state and simulates the entire batch. Review the granter, recipients, validators/providers, amounts, vote, gas and multisig fee.
 5. **Create unsigned proposal** saves the reviewed transaction. Share the proposal with the multisig members. Saving does not sign or broadcast it.
 
@@ -40,7 +40,7 @@ Votes list proposals currently in voting and require an explicit option. A new v
 
 ## Batching and freshness
 
-The guided builder uses one granter and one outer `MsgExec` containing ordered actions (up to 100 inner messages). This is an application limit, not a Ledger compatibility promise. All actions execute atomically; if execution fails, their state changes roll back, but fees and the account sequence may still be consumed.
+The guided builder uses one granter, one selected transaction type and one outer `MsgExec` (up to 100 inner messages for same-type reward claims). Legacy JSON imports can contain ordered actions of multiple types when each is authorized. This is an application limit, not a Ledger compatibility promise. All actions execute atomically; if execution fails, their state changes roll back, but fees and the account sequence may still be consumed.
 
 Grant allowance and resource checks aggregate amounts across the batch. They conservatively reject spending funds that would only become available from an earlier action in the same batch. Simulation is required before review, saving, signing and broadcast. Grant revocation, expiry, state changes or another multisig transaction can invalidate a proposal while signatures are being collected. Create a replacement proposal when its sequence, messages or fees need to change.
 

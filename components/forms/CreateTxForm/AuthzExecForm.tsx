@@ -12,7 +12,6 @@ import {
   execToJson,
   guidedActions,
   normalizeExec,
-  MAX_ACTIONS,
 } from "../../../lib/authz/messages";
 import { AuthzAccount, discoverGranters, loadAuthzAccount } from "../../../lib/authz/queries";
 import { availablePermission } from "../../../lib/authz/grants";
@@ -43,7 +42,7 @@ export default function AuthzExecForm({
   onBack,
 }: {
   senderAddress: string;
-  initialActionType?: string;
+  initialActionType: string;
   accountOnChain: Account;
   onBack: () => void;
 }) {
@@ -158,10 +157,6 @@ export default function AuthzExecForm({
     metadata: "",
     rewards: [],
   });
-  const add = (typeUrl: string) => {
-    reset();
-    setActions((rows) => [...rows, newAction(typeUrl)]);
-  };
   const assemble = (): EncodeObject => {
     if (!state || !actions.length) throw new Error("Load a granter and add an action");
     const msgs: EncodeObject[] = actions.flatMap<EncodeObject>((a) => {
@@ -264,8 +259,11 @@ export default function AuthzExecForm({
     run(async () => {
       setReview(undefined);
       const message = assemble();
-      const client = await StargateClient.connect(chain.nodeAddress);
+      let step = "Connect to the chain RPC";
+      let client: StargateClient | undefined;
       try {
+        client = await StargateClient.connect(chain.nodeAddress);
+        step = "Load the multisig account and public key";
         const [pubkey, account] = await getMultisigAccount(
           senderAddress,
           chain.addressPrefix,
@@ -280,16 +278,24 @@ export default function AuthzExecForm({
           fee: { amount: [], gas: "0" },
           memo,
         };
+        step = "Validate grants and simulate the transaction";
         const gasUsed = await preflightExec(chain.nodeAddress, chain.addressPrefix, tx, pubkey);
         tx.fee = calculateFee(Math.ceil(gasUsed * 1.4), chain.gasPrice);
+        step = "Simulate with the estimated fee";
         await preflightExec(chain.nodeAddress, chain.addressPrefix, tx, pubkey);
         setReview({
           tx,
           gasUsed,
           bytes: serializeSignDoc(approvedTransaction(tx, senderAddress).signDoc).length,
         });
+      } catch (e) {
+        throw new Error(
+          `${step} failed: ${e instanceof Error ? e.message : "Unknown error"}. RPC: ${
+            chain.nodeAddress
+          }`,
+        );
       } finally {
-        client.disconnect();
+        client?.disconnect();
       }
     });
   const save = () =>
@@ -432,32 +438,6 @@ export default function AuthzExecForm({
                     another wallet or ask its owner to grant permission.
                   </p>
                 )}
-                <div className="buttons">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      reset();
-                      setActions((rows) => rows.filter((r) => r.id !== a.id));
-                    }}
-                  >
-                    Remove action {index + 1}
-                  </button>
-                  {index > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        reset();
-                        setActions((rows) => {
-                          const copy = [...rows];
-                          [copy[index - 1], copy[index]] = [copy[index], copy[index - 1]];
-                          return copy;
-                        });
-                      }}
-                    >
-                      Move up
-                    </button>
-                  )}
-                </div>
                 {a.typeUrl === MsgTypeUrls.Send && (
                   <>
                     <label>
@@ -762,26 +742,6 @@ export default function AuthzExecForm({
                 )}
               </article>
             ))}
-            <h3>Add another action</h3>
-            <div className="buttons">
-              {guidedActions.map((a) => (
-                <button
-                  key={a.typeUrl}
-                  type="button"
-                  disabled={
-                    actions.length >= MAX_ACTIONS ||
-                    !availablePermission(state.permissions, a.typeUrl, state.time)
-                  }
-                  onClick={() => add(a.typeUrl)}
-                >
-                  {a.label}
-                </button>
-              ))}
-            </div>
-            <p>
-              Unavailable actions need a matching, unexpired grant. All selected actions execute
-              together; if one fails, their state changes roll back. Fees can still be charged.
-            </p>
             <label>
               Memo
               <input
@@ -795,6 +755,7 @@ export default function AuthzExecForm({
               />
             </label>
             <button
+              className="primary-action"
               type="button"
               disabled={
                 !actions.length ||
@@ -867,6 +828,22 @@ export default function AuthzExecForm({
           font-style: italic;
           color: white;
           cursor: pointer;
+        }
+        .primary-action {
+          display: block;
+          width: 100%;
+          min-height: 56px;
+          margin-top: 24px;
+          padding: 16px 24px;
+          font-size: 1.125rem;
+          font-weight: 700;
+          font-style: normal;
+          background: #a73c9e;
+          border: 2px solid rgba(255, 255, 255, 0.6);
+        }
+        .primary-action:focus-visible {
+          outline: 3px solid white;
+          outline-offset: 3px;
         }
         button:disabled {
           opacity: 0.4;

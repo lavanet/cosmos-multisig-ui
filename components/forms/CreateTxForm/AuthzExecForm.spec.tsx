@@ -108,7 +108,7 @@ beforeEach(async () => {
     .mockResolvedValue([pubkey, { address: grantee, accountNumber: 17, sequence: 9, pubkey }]);
   jest.mocked(requestJson).mockResolvedValue({ transactionID: "0x123" });
 });
-function renderForm(initialActionType?: string) {
+function renderForm(initialActionType: string = MsgTypeUrls.Send) {
   render(
     <StrictMode>
       <RouterContext.Provider value={{ push: jest.fn() } as unknown as NextRouter}>
@@ -122,15 +122,14 @@ function renderForm(initialActionType?: string) {
     </StrictMode>,
   );
 }
-async function mount(initialActionType?: string) {
+async function mount(initialActionType: string = MsgTypeUrls.Send) {
   renderForm(initialActionType);
   await screen.findByRole("option", { name: granter });
   fireEvent.change(screen.getByLabelText("Granter wallet"), { target: { value: granter } });
   await screen.findByText(/Loaded at block 123/);
 }
 it("selects all rewards and saves one ordered MsgExec with multisig account data", async () => {
-  await mount();
-  fireEvent.click(screen.getByRole("button", { name: "Claim delegation rewards" }));
+  await mount(MsgTypeUrls.WithdrawDelegatorReward);
   fireEvent.click(screen.getByRole("checkbox", { name: "Select all reward validators" }));
   fireEvent.click(screen.getByRole("button", { name: "Review and simulate" }));
   await screen.findByRole("button", { name: "Create unsigned proposal" });
@@ -155,7 +154,6 @@ it("selects all rewards and saves one ordered MsgExec with multisig account data
 });
 it("blocks saving when refreshed grants or simulation fail", async () => {
   await mount();
-  fireEvent.click(screen.getByRole("button", { name: "Transfer tokens" }));
   fireEvent.change(screen.getByLabelText("Recipient 1"), { target: { value: grantee } });
   fireEvent.change(screen.getByLabelText("Amount 1"), { target: { value: "1.25" } });
   jest.mocked(preflightExec).mockRejectedValueOnce(new Error("Grant revoked"));
@@ -164,12 +162,11 @@ it("blocks saving when refreshed grants or simulation fail", async () => {
   expect(screen.queryByRole("button", { name: "Create unsigned proposal" })).toBeNull();
   expect(requestJson).not.toHaveBeenCalled();
 });
-it("resets actions when granter changes and disables unavailable actions", async () => {
+it("resets actions when granter changes and keeps the selected grant type", async () => {
   await mount();
-  expect(
-    (screen.getByRole("button", { name: "Staking unbond" }) as HTMLButtonElement).disabled,
-  ).toBe(true);
-  fireEvent.click(screen.getByRole("button", { name: "Transfer tokens" }));
+  expect(screen.queryByText("Add another action")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Staking unbond" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Review and simulate" })).toHaveClass("primary-action");
   fireEvent.change(screen.getByLabelText("Granter wallet"), { target: { value: grantee } });
   expect(screen.queryByLabelText("Recipient 1")).toBeNull();
   expect(screen.queryByRole("button", { name: "Review and simulate" })).toBeNull();
@@ -299,4 +296,18 @@ it.each([
   await waitFor(() => expect(requestJson).toHaveBeenCalledTimes(1));
   const body = jest.mocked(requestJson).mock.calls[0][1]!.body as { dataJSON: string };
   expect(JSON.parse(body.dataJSON).msgs[0].value.msgs).toEqual([{ typeUrl, value }]);
+});
+
+it("identifies account-loading failures and preserves the RPC error for diagnosis", async () => {
+  await mount();
+  fireEvent.change(screen.getByLabelText("Recipient 1"), { target: { value: grantee } });
+  fireEvent.change(screen.getByLabelText("Amount 1"), { target: { value: "1" } });
+  jest
+    .mocked(getMultisigAccount)
+    .mockRejectedValueOnce(new Error("hex string contains invalid characters"));
+  fireEvent.click(screen.getByRole("button", { name: "Review and simulate" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Load the multisig account and public key failed: hex string contains invalid characters",
+  );
+  expect(requestJson).not.toHaveBeenCalled();
 });
