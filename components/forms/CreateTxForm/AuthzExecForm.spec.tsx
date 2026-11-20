@@ -132,9 +132,9 @@ it("selects all rewards and saves one ordered MsgExec with multisig account data
   await mount(MsgTypeUrls.WithdrawDelegatorReward);
   fireEvent.click(screen.getByRole("checkbox", { name: "Select all reward validators" }));
   fireEvent.click(screen.getByRole("button", { name: "Review and simulate" }));
-  await screen.findByRole("button", { name: "Create unsigned proposal" });
+  await screen.findByRole("button", { name: "Create unsigned transaction" });
   expect(requestJson).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole("button", { name: "Create unsigned proposal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Create unsigned transaction" }));
   await waitFor(() => expect(requestJson).toHaveBeenCalledTimes(1));
   const body = jest.mocked(requestJson).mock.calls[0][1]!.body as { dataJSON: string };
   const tx = JSON.parse(body.dataJSON);
@@ -159,7 +159,7 @@ it("blocks saving when refreshed grants or simulation fail", async () => {
   jest.mocked(preflightExec).mockRejectedValueOnce(new Error("Grant revoked"));
   fireEvent.click(screen.getByRole("button", { name: "Review and simulate" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Grant revoked");
-  expect(screen.queryByRole("button", { name: "Create unsigned proposal" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Create unsigned transaction" })).toBeNull();
   expect(requestJson).not.toHaveBeenCalled();
 });
 it("resets actions when granter changes and keeps the selected grant type", async () => {
@@ -292,7 +292,7 @@ it.each([
     fireEvent.change(screen.getByLabelText("Amount 1"), { target: { value: "1.25" } });
   }
   fireEvent.click(screen.getByRole("button", { name: "Review and simulate" }));
-  fireEvent.click(await screen.findByRole("button", { name: "Create unsigned proposal" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Create unsigned transaction" }));
   await waitFor(() => expect(requestJson).toHaveBeenCalledTimes(1));
   const body = jest.mocked(requestJson).mock.calls[0][1]!.body as { dataJSON: string };
   expect(JSON.parse(body.dataJSON).msgs[0].value.msgs).toEqual([{ typeUrl, value }]);

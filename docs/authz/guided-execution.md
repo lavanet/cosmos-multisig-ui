@@ -6,7 +6,7 @@ Open **New Transaction** and choose an action from **On behalf of another wallet
 2. Selecting a wallet automatically loads its permissions and balances. The screen shows grant expiration, remaining allowance, allowed recipients and validator restrictions. Unsupported and expired grants cannot enable actions.
 3. Complete the selected action. Each guided proposal uses one grant transaction type. To choose a different type, remove the transaction and choose another module. Reward claims can still select multiple validators of that same type.
 4. **Review and simulate** checks fresh chain state and simulates the entire batch. Review the granter, recipients, validators/providers, amounts, vote, gas and multisig fee.
-5. **Create unsigned proposal** saves the reviewed transaction. Share the proposal with the multisig members. Saving does not sign or broadcast it.
+5. **Create unsigned transaction** saves the reviewed transaction. Share the proposal with the multisig members. Saving does not sign or broadcast it.
 
 ## Supported guided actions
 

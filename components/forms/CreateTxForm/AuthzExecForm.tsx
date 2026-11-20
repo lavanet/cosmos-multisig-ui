@@ -769,7 +769,7 @@ export default function AuthzExecForm({
         )}
         {review && (
           <section className="review">
-            <h3>Review unsigned proposal</h3>
+            <h3>Review unsigned transaction</h3>
             <TxMsgExecDetails msgValue={review.tx.msgs[0].value} />
             <p>
               Gas used in simulation: {review.gasUsed.toLocaleString()}. Gas limit with 40% margin:{" "}
@@ -784,8 +784,8 @@ export default function AuthzExecForm({
               device and Cosmos app version; this estimate does not guarantee hardware
               compatibility.
             </p>
-            <button type="button" onClick={save}>
-              Create unsigned proposal
+            <button className="primary-action" type="button" onClick={save}>
+              Create unsigned transaction
             </button>
           </section>
         )}
