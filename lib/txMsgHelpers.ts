@@ -1,3 +1,4 @@
+import { execToJson, normalizeExec, EXEC } from "./authz/messages";
 import { EncodeObject } from "@cosmjs/proto-signing";
 import { DbTransaction } from "../types";
 import { MsgCodecs, MsgTypeUrl, MsgTypeUrls } from "../types/txMsg";
@@ -62,6 +63,7 @@ export const isKnownMsgTypeUrl = (typeUrl: string): typeUrl is MsgTypeUrl =>
   Object.values(MsgTypeUrls).includes(typeUrl as MsgTypeUrl);
 
 export const exportMsgToJson = (msg: EncodeObject): EncodeObject => {
+  if (msg.typeUrl === EXEC) return execToJson(msg);
   if (isKnownMsgTypeUrl(msg.typeUrl)) {
     if (msg.typeUrl === MsgTypeUrls.MsgGrant || msg.typeUrl === MsgTypeUrls.MsgExecGrant) {
       // // docode inner trx
@@ -79,6 +81,7 @@ export const exportMsgToJson = (msg: EncodeObject): EncodeObject => {
 };
 
 const importMsgFromJson = (msg: EncodeObject): EncodeObject => {
+  if (msg.typeUrl === EXEC) return normalizeExec(msg);
   if (isKnownMsgTypeUrl(msg.typeUrl)) {
     if (msg.typeUrl === MsgTypeUrls.MsgGrant || msg.typeUrl === MsgTypeUrls.MsgExecGrant) {
       return { ...msg, value: msg.value };

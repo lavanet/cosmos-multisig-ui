@@ -1,3 +1,4 @@
+import { assertSameSignDoc } from "./transactionIntegrity";
 import { IMsgBase } from "./msg_authz_registry/base.authz";
 import { SignerData } from "@cosmjs/stargate";
 import { OfflineAminoSigner, encodeSecp256k1Pubkey, StdFee } from "@cosmjs/amino";
@@ -36,19 +37,20 @@ export const authzAminoSign = async (
   explicitSignerData: SignerData,
   timeoutHeight?: bigint,
 ) => {
+  if (timeoutHeight) throw new Error("Authz Amino signing does not support timeout height");
   const { accountNumber, sequence, chainId } = explicitSignerData;
   const aminoMsgs = msgs.map((msg) => msg.toAmino());
   const signDoc = makeAminoSignDoc(aminoMsgs, fee, chainId, memo, accountNumber, sequence);
   const accountFromSigner = (await signer.getAccounts()).find(
     (account) => account.address === signerAddres,
   );
-  console.log("accountFromSigner", accountFromSigner);
   if (!accountFromSigner) {
     throw new Error("Failed to retrieve account from signer");
   }
   const pubkey = encodePubkey(encodeSecp256k1Pubkey(accountFromSigner.pubkey));
 
   const { signature, signed } = await signer.signAmino(signerAddres, signDoc);
+  assertSameSignDoc(signDoc, signed);
   const signedGasLimit = Int53.fromString(signed.fee.gas).toNumber();
   const signedSequence = Int53.fromString(signed.sequence).toNumber();
   const signMode = SignMode.SIGN_MODE_LEGACY_AMINO_JSON;

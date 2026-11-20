@@ -1,3 +1,4 @@
+import { validateTransactionJson } from "../../../lib/apiValidation";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createTransaction } from "../../../lib/graphqlHelpers";
 
@@ -7,7 +8,9 @@ export default async function transactionApi(req: NextApiRequest, res: NextApiRe
       try {
         const data = req.body;
         console.log("Function `createTransaction` invoked", data);
-        const createTransactionResult = await createTransaction(data.dataJSON);
+        const createTransactionResult = await createTransaction(
+          validateTransactionJson(data.dataJSON),
+        );
         console.log("createTransactionResult:", createTransactionResult);
         res
           .status(200)
