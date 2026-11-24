@@ -142,6 +142,10 @@ export const getChainFromUrl = (chainName: string) => {
 };
 
 export const getChainFromEnvfile = (chainName: string) => {
+  if (chainName === "lava" && process.env.NEXT_PUBLIC_LAVA_RPC_PROXY === "true") {
+    const proxy = new URL("/api/rpc/lava", window.location.origin).href;
+    return { registryName: chainName, nodeAddress: proxy, nodeAddresses: [proxy] };
+  }
   const registryName = process.env.NEXT_PUBLIC_REGISTRY_NAME || "";
   if (chainName && registryName !== chainName) {
     return { registryName: chainName };

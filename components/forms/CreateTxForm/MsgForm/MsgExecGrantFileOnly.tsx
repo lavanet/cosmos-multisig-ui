@@ -1,3 +1,5 @@
+import { normalizeExec, EXEC } from "../../../../lib/authz/messages";
+import { useState } from "react";
 import { useEffect } from "react";
 import { MsgGetter } from "..";
 import { useChains } from "../../../../context/ChainsContext";
@@ -14,10 +16,20 @@ interface MsgSendFormProps {
 
 const MsgGrant = ({ fromAddress, setMsgGetter, deleteMsg, msg: msgProps }: MsgSendFormProps) => {
   const { chain } = useChains();
+  const [error, setError] = useState("");
 
   useEffect(() => {
     setMsgGetter({
-      isMsgValid: () => true,
+      isMsgValid: () => {
+        try {
+          normalizeExec({ typeUrl: EXEC, value: msgProps }, fromAddress);
+          setError("");
+          return true;
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "Invalid execution");
+          return false;
+        }
+      },
       msg: { typeUrl: MsgTypeUrls.MsgExecGrant, value: msgProps },
     });
   }, [chain.addressPrefix, chain.assets, chain.chainId, fromAddress, setMsgGetter, msgProps]);
@@ -27,10 +39,13 @@ const MsgGrant = ({ fromAddress, setMsgGetter, deleteMsg, msg: msgProps }: MsgSe
       <button className="remove" onClick={() => deleteMsg()}>
         ✕
       </button>
-      <h2>RAW TRX GRANT</h2>
+      <h2>Imported authz execution</h2>
+      {error && <p role="alert">{error}</p>}
 
       <div className="jsonContainer">
-        <pre>{JSON.stringify(msgProps, null, 2)}</pre>
+        <pre>
+          {JSON.stringify(msgProps, (_, v) => (typeof v === "bigint" ? v.toString() : v), 2)}
+        </pre>
       </div>
 
       <style jsx>{`

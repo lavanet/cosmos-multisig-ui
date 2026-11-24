@@ -1,3 +1,11 @@
+import { OfflineAminoSigner, pubkeyToAddress } from "@cosmjs/amino";
+import {
+  approvedTransaction,
+  assertSameSignDoc,
+  verifiedSignatures,
+} from "../../lib/transactionIntegrity";
+import { preflightExec } from "../../lib/authz/preflight";
+import { hasExec } from "../../lib/authz/messages";
 import { saveAs } from "file-saver";
 import { toastError, toastSuccess } from "@/lib/utils";
 import { LoadingStates, SigningStatus } from "@/types/signing";
@@ -161,6 +169,29 @@ const TransactionSigning = (props: TransactionSigningProps) => {
       const signerAddress = walletAccount?.bech32Address;
       assert(signerAddress, "Missing signer address");
 
+      if (chain.chainId !== props.tx.chainId)
+        {throw new Error("Transaction belongs to a different chain");}
+      const grantee = pubkeyToAddress(props.pubkey, chain.addressPrefix);
+      const approved = approvedTransaction(props.tx, grantee);
+      if (hasExec(props.tx.msgs)) {
+        const used = await preflightExec(
+          chain.nodeAddress,
+          chain.addressPrefix,
+          props.tx,
+          props.pubkey,
+        );
+        if (used > Number(props.tx.fee.gas))
+          {throw new Error("Gas limit is no longer sufficient. Create a new proposal.");}
+      }
+      const guardedSigner: OfflineAminoSigner = {
+        getAccounts: () => offlineSigner.getAccounts(),
+        signAmino: async (address, doc) => {
+          assertSameSignDoc(approved.signDoc, doc);
+          const result = await offlineSigner.signAmino(address, doc);
+          assertSameSignDoc(approved.signDoc, result.signed);
+          return result;
+        },
+      };
       const aminoTypes = new AminoTypes({
         ...createDefaultAminoConverters(),
         ...createWasmAminoConverters(),
@@ -169,7 +200,7 @@ const TransactionSigning = (props: TransactionSigningProps) => {
         ...createAuthzAminoConverters(),
       });
 
-      const signingClient = await SigningStargateClient.offline(offlineSigner, {
+      const signingClient = await SigningStargateClient.offline(guardedSigner, {
         registry: new Registry([
           ...defaultRegistryTypes,
           ...wasmTypes,
@@ -198,7 +229,7 @@ const TransactionSigning = (props: TransactionSigningProps) => {
         ({ bodyBytes, signatures } = await authzAminoSign(
           signerAddress,
           execMsgs,
-          offlineSigner,
+          guardedSigner,
           props.tx.fee,
           props.tx.memo,
           signerData,
@@ -228,6 +259,15 @@ const TransactionSigning = (props: TransactionSigningProps) => {
         signature: bases64EncodedSignature,
         address: signerAddress,
       };
+      const verified = await verifiedSignatures(
+        props.tx,
+        props.pubkey,
+        chain.addressPrefix,
+        [signature],
+        grantee,
+      );
+      if (!verified.length)
+        {throw new Error("Wallet signature does not match the approved transaction");}
       await requestJson(`/api/transaction/${props.transactionID}/signature`, { body: signature });
       toastSuccess("Transaction signed by", signerAddress);
       props.addSignature(signature);

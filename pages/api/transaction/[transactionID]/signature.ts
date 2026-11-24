@@ -1,3 +1,4 @@
+import { recordId, signatureSchema } from "../../../../lib/apiValidation";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createSignature } from "../../../../lib/graphqlHelpers";
 
@@ -5,8 +6,8 @@ export default async function transactionIDApi(req: NextApiRequest, res: NextApi
   switch (req.method) {
     case "POST":
       try {
-        const transactionID = req.query.transactionID?.toString() || "";
-        const data = req.body;
+        const transactionID = recordId.parse(req.query.transactionID);
+        const data = signatureSchema.parse(req.body);
         console.log("Function `createSignature` invoked", data);
         const saveRes = await createSignature(data, transactionID);
         console.log("success", saveRes.data);
